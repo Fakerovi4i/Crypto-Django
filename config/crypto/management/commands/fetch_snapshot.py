@@ -1,14 +1,9 @@
 from django.core.management.base import BaseCommand
 
 from crypto.models import CoinPrice, Snapshot
-
 from crypto.providers.coingecko import ProviderCoingecko
 from crypto.providers.connector import Connector
 from crypto.providers.entities import Coin
-
-
-
-# from crypto.providers import ProviderCoingecko  # твой существующий класс
 
 
 class Command(BaseCommand):

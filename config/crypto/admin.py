@@ -12,6 +12,7 @@ class CoinPriceInline(admin.TabularInline):
 @admin.register(Snapshot)
 class SnapshotAdmin(admin.ModelAdmin):
     list_display = ('id', 'created_at', 'source')
+    list_display_links = ('id', 'created_at')
     ordering = ('-created_at',)
     inlines = [CoinPriceInline]
 
