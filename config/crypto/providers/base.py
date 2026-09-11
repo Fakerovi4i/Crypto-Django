@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from crypto.providers.connector import Connector
+from crypto.providers.entities import Coin
 
 
 class BaseProvider(ABC):
