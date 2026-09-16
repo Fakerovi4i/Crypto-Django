@@ -2,11 +2,11 @@ from rest_framework import generics, viewsets
 from rest_framework.pagination import PageNumberPagination
 
 from crypto.models import Snapshot, CoinPrice
-from crypto.serializers import SnapshotSerializer, CoinPriceHistorySerializer
+from crypto.serializers import CoinPriceHistorySerializer, SnapshotListSerializer, SnapshotDetailSerializer
 
 
 class SnapshotPagination(PageNumberPagination):
-    page_size = 1
+    page_size = 10
 
 
 class CoinPricePagination(PageNumberPagination):
@@ -14,9 +14,16 @@ class CoinPricePagination(PageNumberPagination):
 
 
 class SnapshotViewSet(viewsets.ModelViewSet):
+    """Представление для Snapshot с вариантом списка и детализации"""
     queryset = Snapshot.objects.all()
-    serializer_class = SnapshotSerializer
     pagination_class = SnapshotPagination
+
+    # Переопределяем метод get_serializer_class для возвращения разных сериализаторов в зависимости от действия
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return SnapshotListSerializer
+        # Тут вызывается retrieve
+        return SnapshotDetailSerializer
 
 
 class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):

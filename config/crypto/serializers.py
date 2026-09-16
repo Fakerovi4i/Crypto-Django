@@ -9,8 +9,16 @@ class CoinPriceSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class SnapshotSerializer(serializers.ModelSerializer):
+class SnapshotListSerializer(serializers.ModelSerializer):
     """Сериализатор для Snapshot api/snapshots"""
+
+    class Meta:
+        model = Snapshot
+        fields = ['id', 'created_at', 'source']
+
+
+class SnapshotDetailSerializer(serializers.ModelSerializer):
+    """Сериализатор для Snapshot c монетами api/snapshots/{id}"""
     coin_prices = CoinPriceSerializer(many=True, read_only=True)
 
     class Meta:
