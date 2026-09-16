@@ -10,6 +10,7 @@ class Snapshot(models.Model):
     class Meta:
         verbose_name = "Снимок рынка"
         verbose_name_plural = "Снимки рынка"
+        ordering = ['-created_at']
 
 class CoinPrice(models.Model):
     coin_id = models.CharField(max_length=100, verbose_name="ID")
