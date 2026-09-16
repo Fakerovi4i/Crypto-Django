@@ -15,10 +15,20 @@ class CoinPrice(models.Model):
     coin_id = models.CharField(max_length=100, verbose_name="ID")
     name = models.CharField(max_length=100, verbose_name="Название")
     symbol = models.CharField(max_length=100, verbose_name="Обозначение")
-    price = models.FloatField(verbose_name="Цена")
-    market_cap = models.FloatField(verbose_name="Рынчная стоимость")
-    total_volume = models.FloatField(verbose_name="Обьем средств")
-    price_change_percentage_24h = models.FloatField(verbose_name="Изменение за 24 часа")
+
+    price = models.DecimalField(
+        max_digits=20, decimal_places=8, verbose_name="Цена"
+    )
+    market_cap = models.DecimalField(
+        max_digits=30, decimal_places=2, verbose_name="Рыночная стоимость"
+    )
+    total_volume = models.DecimalField(
+        max_digits=30, decimal_places=2, verbose_name="Объём средств"
+    )
+    price_change_percentage_24h = models.DecimalField(
+        max_digits=10, decimal_places=4, verbose_name="Изменение за 24 часа"
+    )
+
     snapshot = models.ForeignKey(Snapshot, on_delete=models.CASCADE, related_name='coin_prices', verbose_name="Снимок")
 
     class Meta:
