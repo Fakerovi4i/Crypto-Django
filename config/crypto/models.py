@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.auth.models import User
+
 
 class Snapshot(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата")
@@ -25,3 +27,27 @@ class CoinPrice(models.Model):
     class Meta:
         verbose_name = "Крипто-монета"
         verbose_name_plural = "Крипто-монеты"
+
+
+class WatchlistItem(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='watchlist_items',
+        verbose_name="Пользователь"
+    )
+    coin_symbol = models.CharField(max_length=50, verbose_name="Монета")
+
+    class Meta:
+        verbose_name = "Монета в watchlist"
+        verbose_name_plural = "Монеты в watchlist"
+        ordering = ["coin_symbol"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "coin_symbol"],
+                name="unique_user_coin_symbol",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user} — {self.coin_symbol}"
