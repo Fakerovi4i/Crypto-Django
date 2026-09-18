@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('crypto', '0001_initial'),
+        ('crypto', '0002_cleanup_orphan_coinprices'),
     ]
 
     operations = [
