@@ -21,6 +21,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 
+EXCHANGE_PROVIDER = os.getenv('EXCHANGE_PROVIDER')
+
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
@@ -118,7 +120,7 @@ REST_FRAMEWORK = {
     ],
 
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ],
 }
 
