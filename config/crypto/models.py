@@ -2,7 +2,7 @@ from django.db import models
 
 class Snapshot(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата")
-    source = models.CharField(max_length=100, blank=True, null=True, verbose_name="Источник")
+    source = models.CharField(max_length=100, blank=True, default='', verbose_name="Источник")
 
     def __str__(self):
         return f"ID снимка: {self.pk}"
