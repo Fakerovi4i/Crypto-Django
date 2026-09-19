@@ -6,10 +6,14 @@ from django.conf import settings
 
 def get_provider() -> BaseProvider:
     """Использовать как контекстный менеджер"""
+    providers = {
+        'coingecko': ProviderCoingecko,
+        # 'coinmarketcap': ProviderCoinMarketCap,
+    }
     name_provider = settings.EXCHANGE_PROVIDER
+    provider_class = providers.get(name_provider)
 
-    if name_provider == 'coingecko':
-        return ProviderCoingecko(connector=Connector())
+    if provider_class is None:
+        raise ValueError(f'Unknown provider: {name_provider}')
 
-    raise ValueError(f'Unknown provider: {name_provider}')
-
+    return provider_class(connector=Connector())
