@@ -1,0 +1,26 @@
+from django.contrib.auth.models import User
+
+from crypto.models import WatchlistItem
+from crypto.providers.base import BaseProvider
+from crypto.providers.provider_factory import get_provider
+
+
+def watchlist_item_add(*, symbol: str, user: User):
+    """
+    Добавляет symbol в watchlist
+    """
+    provider: BaseProvider = get_provider()
+    with provider as p:
+        if not p.symbol_exists(symbol):
+            raise ValueError("Symbol not found")
+
+    return WatchlistItem.objects.create(user=user, coin_symbol=symbol)
+
+
+def watchlist_item_list(*, user: User):
+    return WatchlistItem.objects.filter(user=user)
+
+
+def watchlist_item_delete(*, user: User, item_id: int) -> None:
+    WatchlistItem.objects.filter(user=user, id=item_id).delete()
+
