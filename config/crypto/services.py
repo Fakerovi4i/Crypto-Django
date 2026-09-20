@@ -17,10 +17,13 @@ def watchlist_item_add(*, symbol: str, user: User):
     return WatchlistItem.objects.create(user=user, coin_symbol=symbol)
 
 
-def watchlist_item_list(*, user: User):
+def watchlist_items_list(*, user: User):
     return WatchlistItem.objects.filter(user=user)
 
 
+
 def watchlist_item_delete(*, user: User, item_id: int) -> None:
-    WatchlistItem.objects.filter(user=user, id=item_id).delete()
+    deleted_count, _ = WatchlistItem.objects.filter(user=user, id=item_id).delete()
+    if deleted_count == 0:
+        raise ValueError("Item not found")
 
