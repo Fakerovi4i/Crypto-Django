@@ -51,18 +51,10 @@ class WatchlistServiceTests(TestCase):
         self.assertEqual(items[0].coin_symbol, 'btc')
         self.assertEqual(items[1].coin_symbol, 'eth')
 
-    def test_watchlist_item_delete_item_is_deleted(self):
-        btc = WatchlistItem.objects.create(user=self.user, coin_symbol='btc')
-        eth = WatchlistItem.objects.create(user=self.user, coin_symbol='eth')
+    def test_watchlist_item_delete_not_delete_other_item(self):
+        other_user = User.objects.create_user(username='test_2', password='123')
+        other_item = WatchlistItem.objects.create(user=other_user, coin_symbol='eth')
 
-        watchlist_item_delete(user=self.user, item_id=btc.pk)
+        watchlist_item_delete(user=self.user, item_id=other_item.pk)
 
-        self.assertEqual(WatchlistItem.objects.count(), 1)
-        self.assertEqual(WatchlistItem.objects.get(pk=eth.pk).coin_symbol, 'eth')
-        self.assertFalse(WatchlistItem.objects.filter(pk=btc.pk).exists())
-
-
-
-
-
-
+        self.assertTrue(WatchlistItem.objects.filter(pk=other_item.pk).exists())

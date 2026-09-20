@@ -61,12 +61,8 @@ class WatchlistViewSet(viewsets.ViewSet):
         serializer = WatchlistItemSerializer(items, many=True)
         return Response(serializer.data)
 
-    def destroy(self, request, item_id):
-        try:
-            watchlist_item_delete(user=request.user, item_id=item_id)
-        except ValueError as e:
-            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
-
+    def destroy(self, request, pk=None):
+        watchlist_item_delete(user=request.user, item_id=pk)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
