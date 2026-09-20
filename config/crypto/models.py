@@ -39,8 +39,8 @@ class WatchlistItem(models.Model):
     coin_symbol = models.CharField(max_length=50, verbose_name="Монета")
 
     class Meta:
-        verbose_name = "Монета в watchlist"
-        verbose_name_plural = "Монеты в watchlist"
+        verbose_name = "Coin hystory"
+        verbose_name_plural = "Монеты отслеживания"
         ordering = ["coin_symbol"]
         constraints = [
             models.UniqueConstraint(
