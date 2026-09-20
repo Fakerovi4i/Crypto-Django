@@ -23,7 +23,6 @@ def watchlist_items_list(*, user: User):
 
 
 def watchlist_item_delete(*, user: User, item_id: int) -> None:
-    deleted_count, _ = WatchlistItem.objects.filter(user=user, id=item_id).delete()
-    if deleted_count == 0:
-        raise ValueError("Item not found")
+    WatchlistItem.objects.filter(user=user, id=item_id).delete()
+
 
