@@ -1,9 +1,9 @@
-from rest_framework import viewsets, views, status
+from rest_framework import viewsets, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from crypto.models import Snapshot, CoinPrice, WatchlistItem
+from crypto.models import Snapshot, CoinPrice
 from crypto.serializers import CoinPriceHistorySerializer, SnapshotListSerializer, SnapshotDetailSerializer, \
     WatchlistItemSerializer
 from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_item_delete
@@ -31,6 +31,7 @@ class SnapshotViewSet(viewsets.ModelViewSet):
 
 
 class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
+    """Представление для истории цены"""
     queryset = CoinPrice.objects.all()
     serializer_class = CoinPriceHistorySerializer
     pagination_class = CoinPricePagination
@@ -45,6 +46,7 @@ class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
 
 
 class WatchlistViewSet(viewsets.ViewSet):
+    """Представление для Watchlist"""
     permission_classes = (IsAuthenticated,)
 
     def create(self, request):
