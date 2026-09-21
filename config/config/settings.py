@@ -9,11 +9,11 @@ https://docs.djangoproject.com/en/6.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
+
 import os
 from datetime import timedelta
 from pathlib import Path
 from dotenv import load_dotenv
-
 
 load_dotenv()
 
@@ -110,6 +110,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',           # Для отдачи JSON
         'rest_framework.renderers.BrowsableAPIRenderer',   # Для веб-интерфейса DRF

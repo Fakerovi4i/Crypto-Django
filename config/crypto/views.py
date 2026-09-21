@@ -9,18 +9,9 @@ from crypto.serializers import CoinPriceHistorySerializer, SnapshotListSerialize
 from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_item_delete
 
 
-class SnapshotPagination(PageNumberPagination):
-    page_size = 10
-
-
-class CoinPricePagination(PageNumberPagination):
-    page_size = 10
-
-
 class SnapshotViewSet(viewsets.ModelViewSet):
     """Представление для Snapshot с вариантом списка и детализации"""
     queryset = Snapshot.objects.all()
-    pagination_class = SnapshotPagination
 
     # Переопределяем метод get_serializer_class для возвращения разных сериализаторов в зависимости от действия
     def get_serializer_class(self):
@@ -34,7 +25,6 @@ class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
     """Представление для истории цены"""
     queryset = CoinPrice.objects.all()
     serializer_class = CoinPriceHistorySerializer
-    pagination_class = CoinPricePagination
 
     def get_queryset(self):
         queryset = super().get_queryset()

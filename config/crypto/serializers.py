@@ -6,7 +6,7 @@ class CoinPriceSerializer(serializers.ModelSerializer):
     """Вложенный сериализатор для SnapshotSerializer"""
     class Meta:
         model = CoinPrice
-        fields = '__all__'
+        fields = ["coin_id", "name", "symbol", "price", "market_cap", "total_volume", "price_change_percentage_24h"]
 
 
 class SnapshotListSerializer(serializers.ModelSerializer):

@@ -1,0 +1,6 @@
+SECRET_KEY="Your Django Secret Key"
+DB_NAME="Your Database Name"
+DB_USER="Your Database User"
+DB_PASSWORD="Your Database Password"
+DB_HOST="Your Database Host"
+DB_PORT="Your Database Port"
