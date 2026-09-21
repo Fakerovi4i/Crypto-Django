@@ -26,7 +26,7 @@ class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
         symbol = self.request.query_params.get('symbol')
         if symbol:
             queryset = queryset.filter(symbol__iexact=symbol)
-        return queryset.order_by('snapshot__source', 'snapshot__created_at', 'id')
+        return queryset.order_by('snapshot__created_at', 'id', 'snapshot__source')
 
 
 
