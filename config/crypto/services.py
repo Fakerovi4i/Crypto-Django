@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.db import IntegrityError
 
 from crypto.models import WatchlistItem
 from crypto.providers.base import BaseProvider
@@ -13,16 +14,24 @@ def watchlist_item_add(*, symbol: str, user: User):
     with provider as p:
         if not p.symbol_exists(symbol):
             raise ValueError("Symbol not found")
-
-    return WatchlistItem.objects.create(user=user, coin_symbol=symbol)
+    try:
+        item = WatchlistItem.objects.create(user=user, coin_symbol=symbol)
+    except IntegrityError:
+        raise ValueError("Symbol already in watchlist")
+    return item
 
 
 def watchlist_items_list(*, user: User):
     return WatchlistItem.objects.filter(user=user)
 
 
-
 def watchlist_item_delete(*, user: User, item_id: int) -> None:
-    WatchlistItem.objects.filter(user=user, id=item_id).delete()
+    try:
+        item = WatchlistItem.objects.get(user=user, id=item_id)
+    except (WatchlistItem.DoesNotExist, ValueError, TypeError):
+        raise ValueError(f"Item {item_id} not found")
+    item.delete()
+
+
 
 

@@ -6,6 +6,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from crypto.models import WatchlistItem
+from crypto.tests.helpers import make_mock_provider
 
 
 class WatchlistApiTests(APITestCase):
@@ -28,12 +29,9 @@ class WatchlistApiTests(APITestCase):
     @patch('crypto.services.get_provider')
     def test_success_add_item(self, mock_get_provider):
         """Проверяет, что добавление в монеты работает корректно"""
-        mock_provider = MagicMock()
-        mock_provider.__enter__.return_value = mock_provider
-        mock_provider.symbol_exists.return_value = True
-        mock_get_provider.return_value = mock_provider
+        mock_get_provider.return_value = make_mock_provider(symbol_exists=True)
 
-        response = self.client.post('/api/watchlist/', {'symbol': 'btc'})
+        response = self.client.post('/api/watchlist/', {'coin_symbol': 'btc'})
 
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -72,7 +70,7 @@ class WatchlistApiTests(APITestCase):
         # user try delete other_user item
         response = self.client.delete(f'/api/watchlist/{other_item.pk}/')
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(WatchlistItem.objects.count(), 1)
         self.assertTrue(WatchlistItem.objects.filter(pk=other_item.pk).exists())
 

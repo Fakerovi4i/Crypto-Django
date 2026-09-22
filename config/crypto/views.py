@@ -1,5 +1,4 @@
 from rest_framework import viewsets, status
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -9,7 +8,7 @@ from crypto.serializers import CoinPriceHistorySerializer, SnapshotListSerialize
 from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_item_delete
 
 
-class SnapshotViewSet(viewsets.ModelViewSet):
+class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
     """Представление для Snapshot с вариантом списка и детализации"""
     queryset = Snapshot.objects.all()
 
@@ -40,13 +39,19 @@ class WatchlistViewSet(viewsets.ViewSet):
     permission_classes = (IsAuthenticated,)
 
     def create(self, request):
+        input_serializer = WatchlistItemSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+
         try:
-            item = watchlist_item_add(user=request.user, symbol=request.data.get('symbol'))
+            item = watchlist_item_add(
+                user=request.user,
+                symbol=input_serializer.validated_data['coin_symbol']
+            )
         except ValueError as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = WatchlistItemSerializer(item)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        output_serializer = WatchlistItemSerializer(item)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
 
     def list(self, request):
         items = watchlist_items_list(user=request.user)
@@ -54,7 +59,10 @@ class WatchlistViewSet(viewsets.ViewSet):
         return Response(serializer.data)
 
     def destroy(self, request, pk=None):
-        watchlist_item_delete(user=request.user, item_id=pk)
+        try:
+            watchlist_item_delete(user=request.user, item_id=pk)
+        except ValueError as e:
+            return Response(data={'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

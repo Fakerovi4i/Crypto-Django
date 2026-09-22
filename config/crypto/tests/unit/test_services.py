@@ -5,6 +5,7 @@ from django.test import TestCase
 
 from crypto.models import WatchlistItem
 from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_item_delete
+from crypto.tests.helpers import make_mock_provider
 
 
 class WatchlistServiceTests(TestCase):
@@ -14,10 +15,7 @@ class WatchlistServiceTests(TestCase):
     @patch('crypto.services.get_provider')
     def test_watchlist_item_add_create_valid_symbol(self, mock_get_provider):
         """Проверяет, что добавление в монеты с существующим символом работает корректно"""
-        mock_provider = MagicMock()
-        mock_provider.__enter__.return_value = mock_provider
-        mock_provider.symbol_exists.return_value = True
-        mock_get_provider.return_value = mock_provider
+        mock_get_provider.return_value = make_mock_provider(symbol_exists=True)
 
         item = watchlist_item_add(user=self.user, symbol='btc')
 
@@ -29,10 +27,7 @@ class WatchlistServiceTests(TestCase):
     @patch('crypto.services.get_provider')
     def test_watchlist_item_add_create_invalid_symbol(self, mock_get_provider):
         """Проверяет, что добавление в монеты с несуществующим символом выдает ошибку"""
-        mock_provider = MagicMock()
-        mock_provider.__enter__.return_value = mock_provider
-        mock_provider.symbol_exists.return_value = False
-        mock_get_provider.return_value = mock_provider
+        mock_get_provider.return_value = make_mock_provider(symbol_exists=False)
 
         with self.assertRaises(ValueError):
             watchlist_item_add(user=self.user, symbol='btc')
@@ -59,6 +54,7 @@ class WatchlistServiceTests(TestCase):
         other_user = User.objects.create_user(username='test_2', password='123')
         other_item = WatchlistItem.objects.create(user=other_user, coin_symbol='eth')
 
-        watchlist_item_delete(user=self.user, item_id=other_item.pk)
+        with self.assertRaises(ValueError):
+            watchlist_item_delete(user=self.user, item_id=other_item.pk)
 
         self.assertTrue(WatchlistItem.objects.filter(pk=other_item.pk).exists())
