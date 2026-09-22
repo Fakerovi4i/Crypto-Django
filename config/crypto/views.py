@@ -22,7 +22,7 @@ class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
 
 class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
     """Представление для истории цены"""
-    queryset = CoinPrice.objects.all()
+    queryset = CoinPrice.objects.select_related('snapshot')
     serializer_class = CoinPriceHistorySerializer
 
     def get_queryset(self):
