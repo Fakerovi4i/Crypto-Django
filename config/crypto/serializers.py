@@ -40,3 +40,11 @@ class WatchlistItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = WatchlistItem
         fields = ['id', 'coin_symbol']
+
+
+class AnalyticsMarketStatsSerializer(serializers.Serializer):
+    min_price = serializers.DecimalField(max_digits=20, decimal_places=8)
+    max_price = serializers.DecimalField(max_digits=20, decimal_places=8)
+    avg_price = serializers.DecimalField(max_digits=20, decimal_places=8)
+    total_market_cap = serializers.DecimalField(max_digits=30, decimal_places=2)
+

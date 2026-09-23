@@ -1,12 +1,13 @@
 from django.contrib.auth.models import User
 from django.db import IntegrityError
+from django.db.models import Min, Max, Avg, Sum, QuerySet
 
-from crypto.models import WatchlistItem
+from crypto.models import WatchlistItem, Snapshot, CoinPrice
 from crypto.providers.base import BaseProvider
 from crypto.providers.provider_factory import get_provider
 
 
-def watchlist_item_add(*, symbol: str, user: User):
+def watchlist_item_add(*, symbol: str, user: User) -> QuerySet:
     """
     Добавляет symbol в watchlist
     """
@@ -21,7 +22,7 @@ def watchlist_item_add(*, symbol: str, user: User):
     return item
 
 
-def watchlist_items_list(*, user: User):
+def watchlist_items_list(*, user: User) -> QuerySet:
     return WatchlistItem.objects.filter(user=user)
 
 
@@ -34,4 +35,21 @@ def watchlist_item_delete(*, user: User, item_id: int) -> None:
 
 
 
+def analytics_market_stats() -> dict:
+    latest = Snapshot.objects.first()  # ordering -created_at
+    if latest is None:
+        raise ValueError("No snapshots found")
+
+    stats = CoinPrice.objects.filter(
+        snapshot=latest).aggregate(
+        min_price=Min('price'),
+        max_price=Max('price'),
+        avg_price=Avg('price'),
+        total_market_cap=Sum('market_cap')
+    )
+
+    if stats['min_price'] is None:
+        raise ValueError("No market data found")
+
+    return stats
 

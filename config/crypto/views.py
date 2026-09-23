@@ -1,11 +1,11 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, views
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from crypto.models import Snapshot, CoinPrice
 from crypto.serializers import CoinPriceHistorySerializer, SnapshotListSerializer, SnapshotDetailSerializer, \
-    WatchlistItemSerializer
-from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_item_delete
+    WatchlistItemSerializer, AnalyticsMarketStatsSerializer
+from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_item_delete, analytics_market_stats
 
 
 class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
@@ -66,3 +66,13 @@ class WatchlistViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class AnalyticsMarketStatsApi(views.APIView):
+    """GET /api/analytics/market-stats/ — статистика по последнему снапшоту"""
+    def get(self, request):
+        try:
+            stats = analytics_market_stats()
+        except ValueError as e:
+            return Response(data={'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AnalyticsMarketStatsSerializer(stats)
+        return Response(serializer.data)
