@@ -1,11 +1,14 @@
+from django.core.serializers import serialize
 from rest_framework import viewsets, status, views
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from crypto.models import Snapshot, CoinPrice
 from crypto.serializers import CoinPriceHistorySerializer, SnapshotListSerializer, SnapshotDetailSerializer, \
-    WatchlistItemSerializer, AnalyticsMarketStatsSerializer
-from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_item_delete, analytics_market_stats
+    WatchlistItemSerializer, AnalyticsMarketStatsSerializer, CoinPriceSerializer
+
+from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_item_delete, analytics_market_stats, \
+    analytics_top_movers
 
 
 class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
@@ -76,3 +79,18 @@ class AnalyticsMarketStatsApi(views.APIView):
 
         serializer = AnalyticsMarketStatsSerializer(stats)
         return Response(serializer.data)
+
+
+class AnalyticsTopMoversApi(views.APIView):
+    """GET /api/analytics/top-movers/ — топ-10 монет по изменению цены за 24ч"""
+
+    def get(self, request):
+        try:
+            top_movers = analytics_top_movers()
+        except ValueError as e:
+            return Response(data={'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CoinPriceSerializer(top_movers, many=True)
+        return Response(serializer.data)
+
+

@@ -3,7 +3,7 @@ from crypto.models import Snapshot, CoinPrice, WatchlistItem
 
 
 class CoinPriceSerializer(serializers.ModelSerializer):
-    """Вложенный сериализатор для SnapshotSerializer"""
+    """Вложенный сериализатор для SnapshotSerializer, AnalyticsTopMoversApi"""
     class Meta:
         model = CoinPrice
         fields = ["coin_id", "name", "symbol", "price", "market_cap", "total_volume", "price_change_percentage_24h"]

@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.db.models import Min, Max, Avg, Sum, QuerySet
+from django.db.models.functions import Abs
 
 from crypto.models import WatchlistItem, Snapshot, CoinPrice
 from crypto.providers.base import BaseProvider
@@ -46,8 +47,7 @@ def analytics_market_stats() -> dict:
     if latest is None:
         raise ValueError("No snapshots found")
 
-    stats = CoinPrice.objects.filter(
-        snapshot=latest).aggregate(
+    stats = CoinPrice.objects.filter(snapshot=latest).aggregate(
         min_price=Min('price'),
         max_price=Max('price'),
         avg_price=Avg('price'),
@@ -58,4 +58,20 @@ def analytics_market_stats() -> dict:
         raise ValueError("No market data found")
 
     return stats
+
+
+def analytics_top_movers():
+    latest_snapshot = Snapshot.objects.first()
+    if latest_snapshot is None:
+        raise ValueError("No snapshots found")
+
+    coin_prices = CoinPrice.objects.filter(
+        snapshot=latest_snapshot
+    ).annotate(volatility=Abs(
+        'price_change_percentage_24h')
+    ).order_by('-volatility')[:10]
+
+    return coin_prices
+
+
 
