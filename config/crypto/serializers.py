@@ -2,6 +2,22 @@ from rest_framework import serializers
 from crypto.models import Snapshot, CoinPrice, WatchlistItem
 
 
+class CoinPriceFilterSerializer(serializers.Serializer):
+    """Сериализатор-валидатор для CoinPriceHistory"""
+    symbol = serializers.CharField(required=False, allow_blank=False)
+    min_price = serializers.FloatField(required=False, min_value=0)
+    max_price = serializers.FloatField(required=False, min_value=0)
+
+    def validate(self, attrs):
+        min_price = attrs.get('min_price')
+        max_price = attrs.get('max_price')
+        if min_price is not None and max_price is not None and min_price > max_price:
+            raise serializers.ValidationError(
+                'min_price не может быть больше max_price'
+            )
+        return attrs
+
+
 class CoinPriceSerializer(serializers.ModelSerializer):
     """Вложенный сериализатор для SnapshotSerializer, AnalyticsTopMoversApi"""
     class Meta:

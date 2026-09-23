@@ -4,7 +4,7 @@ from rest_framework.response import Response
 
 from crypto.models import Snapshot, CoinPrice
 from crypto.serializers import CoinPriceHistorySerializer, SnapshotListSerializer, SnapshotDetailSerializer, \
-    WatchlistItemSerializer, AnalyticsMarketStatsSerializer, CoinPriceSerializer
+    WatchlistItemSerializer, AnalyticsMarketStatsSerializer, CoinPriceSerializer, CoinPriceFilterSerializer
 
 from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_item_delete, analytics_market_stats, \
     analytics_top_movers, analytics_volume_leaders
@@ -29,9 +29,17 @@ class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        symbol = self.request.query_params.get('symbol')
-        if symbol:
-            queryset = queryset.filter(symbol__iexact=symbol)
+        filters = CoinPriceFilterSerializer(data=self.request.query_params)
+        filters.is_valid(raise_exception=True)
+
+        #
+        data = filters.validated_data
+        if 'symbol' in data:
+            queryset = queryset.filter(symbol__iexact=data['symbol'])
+        if 'min_price' in data:
+            queryset = queryset.filter(price__gte=data['min_price'])
+        if 'max_price' in data:
+            queryset = queryset.filter(price__lte=data['max_price'])
 
         return queryset.order_by('snapshot__source', 'snapshot__created_at')
 
