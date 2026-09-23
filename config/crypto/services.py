@@ -11,6 +11,7 @@ def watchlist_item_add(*, symbol: str, user: User) -> QuerySet:
     """
     Добавляет symbol в watchlist
     """
+    symbol = symbol.lower()
     provider: BaseProvider = get_provider()
     with provider as p:
         if not p.symbol_exists(symbol):
@@ -28,8 +29,13 @@ def watchlist_items_list(*, user: User) -> QuerySet:
 
 def watchlist_item_delete(*, user: User, item_id: int) -> None:
     try:
+        item_id = int(item_id)
+    except (ValueError, TypeError):
+        raise ValueError(f"Item {item_id} not found")
+
+    try:
         item = WatchlistItem.objects.get(user=user, id=item_id)
-    except (WatchlistItem.DoesNotExist, ValueError, TypeError):
+    except WatchlistItem.DoesNotExist:
         raise ValueError(f"Item {item_id} not found")
     item.delete()
 
