@@ -41,13 +41,17 @@ def watchlist_item_delete(*, user: User, item_id: int) -> None:
     item.delete()
 
 
+def _get_latest_snapshot_helper() -> Snapshot:
+    latest_snapshot = Snapshot.objects.first()  # ordering -created_at
+    if latest_snapshot is None:
+        raise ValueError("No snapshots found")
+    return latest_snapshot
+
 
 def analytics_market_stats() -> dict:
-    latest = Snapshot.objects.first()  # ordering -created_at
-    if latest is None:
-        raise ValueError("No snapshots found")
+    snapshot = _get_latest_snapshot_helper()
 
-    stats = CoinPrice.objects.filter(snapshot=latest).aggregate(
+    stats = CoinPrice.objects.filter(snapshot=snapshot).aggregate(
         min_price=Min('price'),
         max_price=Max('price'),
         avg_price=Avg('price'),
@@ -61,15 +65,23 @@ def analytics_market_stats() -> dict:
 
 
 def analytics_top_movers():
-    latest_snapshot = Snapshot.objects.first()
-    if latest_snapshot is None:
-        raise ValueError("No snapshots found")
+    snapshot = _get_latest_snapshot_helper()
 
     coin_prices = CoinPrice.objects.filter(
-        snapshot=latest_snapshot
+        snapshot=snapshot
     ).annotate(volatility=Abs(
         'price_change_percentage_24h')
     ).order_by('-volatility')[:10]
+
+    return coin_prices
+
+
+def analytics_volume_leaders():
+    snapshot = _get_latest_snapshot_helper()
+
+    coin_prices = CoinPrice.objects.filter(
+        snapshot=snapshot
+    ).order_by('-total_volume')[:10]
 
     return coin_prices
 
