@@ -1,11 +1,14 @@
-from rest_framework import generics, viewsets
-from rest_framework.pagination import PageNumberPagination
+from rest_framework import viewsets, status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from crypto.models import Snapshot, CoinPrice
-from crypto.serializers import CoinPriceHistorySerializer, SnapshotListSerializer, SnapshotDetailSerializer
+from crypto.serializers import CoinPriceHistorySerializer, SnapshotListSerializer, SnapshotDetailSerializer, \
+    WatchlistItemSerializer
+from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_item_delete
 
 
-class SnapshotViewSet(viewsets.ModelViewSet):
+class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
     """Представление для Snapshot с вариантом списка и детализации"""
     queryset = Snapshot.objects.all()
 
@@ -18,6 +21,7 @@ class SnapshotViewSet(viewsets.ModelViewSet):
 
 
 class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
+    """Представление для истории цены"""
     queryset = CoinPrice.objects.all()
     serializer_class = CoinPriceHistorySerializer
 
@@ -26,7 +30,39 @@ class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
         symbol = self.request.query_params.get('symbol')
         if symbol:
             queryset = queryset.filter(symbol__iexact=symbol)
-        return queryset.order_by('snapshot__created_at', 'id', 'snapshot__source')
 
+        return queryset.order_by('snapshot__source', 'snapshot__created_at')
+
+
+class WatchlistViewSet(viewsets.ViewSet):
+    """Представление для Watchlist"""
+    permission_classes = (IsAuthenticated,)
+
+    def create(self, request):
+        input_serializer = WatchlistItemSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+
+        try:
+            item = watchlist_item_add(
+                user=request.user,
+                symbol=input_serializer.validated_data['coin_symbol']
+            )
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        output_serializer = WatchlistItemSerializer(item)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+
+    def list(self, request):
+        items = watchlist_items_list(user=request.user)
+        serializer = WatchlistItemSerializer(items, many=True)
+        return Response(serializer.data)
+
+    def destroy(self, request, pk=None):
+        try:
+            watchlist_item_delete(user=request.user, item_id=pk)
+        except ValueError as e:
+            return Response(data={'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 

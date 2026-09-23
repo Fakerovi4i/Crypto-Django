@@ -8,13 +8,11 @@ class BaseProvider(ABC):
     def __init__(
             self,
             connector: Connector,
-            host: str,
-            path: str
+            host: str
     ):
         self.connector = connector
         self.host = host
-        self.path = path
-        self.url = self.host + self.path
+
 
     def __enter__(self):
         self.connector.__enter__()
@@ -34,3 +32,7 @@ class BaseProvider(ABC):
     @classmethod
     def build_headers(cls) -> dict | None:
         return None
+
+    @abstractmethod
+    def symbol_exists(self, symbol: str) -> bool:
+        pass

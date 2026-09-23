@@ -4,14 +4,12 @@ from crypto.providers.entities import Coin
 
 
 class ProviderCoingecko(BaseProvider):
-    def __init__(
-            self,
-            connector: Connector,
-            host: str = "https://api.coingecko.com",
-            path: str = "/api/v3/coins/markets"
-    ):
-        super().__init__(connector, host, path)
+    HOST = "https://api.coingecko.com"
+    MARKETS_PATH = "/api/v3/coins/markets"
+    SIMPLE_PRICE_PATH = "/api/v3/simple/price"
 
+    def __init__(self, connector: Connector, host: str = HOST):
+        super().__init__(connector, host)
 
     def get_coins(self, params: dict | None = None) -> list[Coin]:
         if params is None:
@@ -34,5 +32,17 @@ class ProviderCoingecko(BaseProvider):
 
 
     def fetch_raw(self, params: dict) -> list[dict]:
-        response: list[dict] = self.connector.get(url=self.url, params=params)
+        url = self.host + self.MARKETS_PATH
+        response: list[dict] = self.connector.get(url=url, params=params)
         return response
+
+
+    def symbol_exists(self, symbol: str) -> bool:
+        url = self.host + self.SIMPLE_PRICE_PATH
+        params = {"vs_currencies": "usd", "symbols": symbol}
+        response: dict = self.connector.get(url=url, params=params)
+
+        if response:
+            return True
+
+        return False

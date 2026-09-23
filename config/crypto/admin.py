@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CoinPrice, Snapshot
+from .models import CoinPrice, Snapshot, WatchlistItem
 
 
 class CoinPriceInline(admin.TabularInline):
@@ -21,6 +21,14 @@ class SnapshotAdmin(admin.ModelAdmin):
 class CoinPriceAdmin(admin.ModelAdmin):
     list_display = ('coin_id', 'name', 'price', 'snapshot')
     ordering = ('price_change_percentage_24h',)
+
+
+@admin.register(WatchlistItem)
+class WatchlistItemAdmin(admin.ModelAdmin):
+    list_display = ('id', 'coin_symbol',  'user')
+    list_display_links = ('id',)
+    ordering = ('-id',)
+
 
 
 

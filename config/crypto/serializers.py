@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from crypto.models import Snapshot, CoinPrice
+from crypto.models import Snapshot, CoinPrice, WatchlistItem
 
 
 class CoinPriceSerializer(serializers.ModelSerializer):
@@ -34,3 +34,9 @@ class CoinPriceHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = CoinPrice
         fields = ['id', 'name', 'symbol', 'price', 'price_change_percentage_24h', 'snapshot_date', 'source']
+
+
+class WatchlistItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WatchlistItem
+        fields = ['id', 'coin_symbol']
