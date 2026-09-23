@@ -42,12 +42,9 @@ class WatchlistApiTests(APITestCase):
     @patch('crypto.services.get_provider')
     def test_invalid_symbol_raise_400(self, mock_get_provider):
         """Проверяет, что добавление в монеты с несуществующим символом возвращает 400"""
-        mock_provider = MagicMock()
-        mock_provider.__enter__.return_value = mock_provider
-        mock_provider.symbol_exists.return_value = False
-        mock_get_provider.return_value = mock_provider
+        mock_get_provider.return_value = make_mock_provider(symbol_exists=False)
 
-        response = self.client.post('/api/watchlist/', {'symbol': 'not_valid_symbol'})
+        response = self.client.post('/api/watchlist/', {'coin_symbol': 'not_valid_symbol'})
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(WatchlistItem.objects.count(), 0)
