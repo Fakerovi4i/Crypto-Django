@@ -32,7 +32,6 @@ class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
         filters = CoinPriceFilterSerializer(data=self.request.query_params)
         filters.is_valid(raise_exception=True)
 
-        #
         data = filters.validated_data
         if 'symbol' in data:
             queryset = queryset.filter(symbol__iexact=data['symbol'])

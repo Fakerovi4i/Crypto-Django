@@ -5,8 +5,8 @@ from crypto.models import Snapshot, CoinPrice, WatchlistItem
 class CoinPriceFilterSerializer(serializers.Serializer):
     """Сериализатор-валидатор для CoinPriceHistory"""
     symbol = serializers.CharField(required=False, allow_blank=False)
-    min_price = serializers.FloatField(required=False, min_value=0)
-    max_price = serializers.FloatField(required=False, min_value=0)
+    min_price = serializers.DecimalField(max_digits=20, decimal_places=8, required=False, min_value=0)
+    max_price = serializers.DecimalField(max_digits=20, decimal_places=8, required=False, min_value=0)
 
     def validate(self, attrs):
         min_price = attrs.get('min_price')
