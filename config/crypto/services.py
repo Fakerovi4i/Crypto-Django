@@ -64,7 +64,7 @@ def analytics_market_stats() -> dict:
     return stats
 
 
-def analytics_top_movers():
+def analytics_top_movers() -> QuerySet:
     snapshot = _get_latest_snapshot_helper()
 
     coin_prices = CoinPrice.objects.filter(
@@ -76,7 +76,7 @@ def analytics_top_movers():
     return coin_prices
 
 
-def analytics_volume_leaders():
+def analytics_volume_leaders() -> QuerySet:
     snapshot = _get_latest_snapshot_helper()
 
     coin_prices = CoinPrice.objects.filter(
