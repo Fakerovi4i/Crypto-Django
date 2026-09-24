@@ -9,9 +9,8 @@ from crypto.providers.provider_factory import get_provider
 
 
 def watchlist_item_add(*, symbol: str, user: User) -> QuerySet:
-    """
-    Добавляет symbol в watchlist
-    """
+    """Добавляет symbol в watchlist"""
+
     symbol = symbol.lower()
     provider: BaseProvider = get_provider()
     with provider as p:
@@ -42,6 +41,7 @@ def watchlist_item_delete(*, user: User, item_id: int) -> None:
 
 
 def _get_latest_snapshot_helper() -> Snapshot:
+    """Возвращает последний снапшот"""
     latest_snapshot = Snapshot.objects.first()  # ordering -created_at
     if latest_snapshot is None:
         raise ValueError("No snapshots found")
@@ -49,6 +49,7 @@ def _get_latest_snapshot_helper() -> Snapshot:
 
 
 def analytics_market_stats() -> dict:
+    """Возвращает статистику по рынку"""
     snapshot = _get_latest_snapshot_helper()
 
     stats = CoinPrice.objects.filter(snapshot=snapshot).aggregate(
@@ -65,6 +66,7 @@ def analytics_market_stats() -> dict:
 
 
 def analytics_top_movers() -> QuerySet:
+    """Возвращает до 10 монет по изменению цены за 24 часа"""
     snapshot = _get_latest_snapshot_helper()
 
     coin_prices = CoinPrice.objects.filter(
@@ -77,6 +79,7 @@ def analytics_top_movers() -> QuerySet:
 
 
 def analytics_volume_leaders() -> QuerySet:
+    """Возвращает список до 10 монет по максимальному обьему торгов"""
     snapshot = _get_latest_snapshot_helper()
 
     coin_prices = CoinPrice.objects.filter(
