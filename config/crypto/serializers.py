@@ -53,12 +53,14 @@ class CoinPriceHistorySerializer(serializers.ModelSerializer):
 
 
 class WatchlistItemSerializer(serializers.ModelSerializer):
+    """Сериализатор для WatchlistItem api/watchlist"""
     class Meta:
         model = WatchlistItem
         fields = ['id', 'coin_symbol']
 
 
 class AnalyticsMarketStatsSerializer(serializers.Serializer):
+    """Сериализатор для AnalyticsMarketStatsSerializer api/analytics/market-stats"""
     min_price = serializers.DecimalField(max_digits=20, decimal_places=8)
     max_price = serializers.DecimalField(max_digits=20, decimal_places=8)
     avg_price = serializers.DecimalField(max_digits=20, decimal_places=8)
