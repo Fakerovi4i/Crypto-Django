@@ -9,6 +9,8 @@ from crypto.serializers import CoinPriceHistorySerializer, SnapshotListSerialize
 from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_item_delete, analytics_market_stats, \
     analytics_top_movers, analytics_volume_leaders
 
+from crypto.decorators import handle_not_found
+
 
 class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
     """Представление для Snapshot с вариантом списка и детализации"""
@@ -77,12 +79,10 @@ class WatchlistViewSet(viewsets.ViewSet):
 
 class AnalyticsMarketStatsApi(views.APIView):
     """GET /api/analytics/market-stats/ — статистика по последнему снапшоту"""
-    def get(self, request):
-        try:
-            stats = analytics_market_stats()
-        except ValueError as e:
-            return Response(data={'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
 
+    @handle_not_found
+    def get(self, request):
+        stats = analytics_market_stats()
         serializer = AnalyticsMarketStatsSerializer(stats)
         return Response(serializer.data)
 
@@ -90,12 +90,9 @@ class AnalyticsMarketStatsApi(views.APIView):
 class AnalyticsTopMoversApi(views.APIView):
     """GET /api/analytics/top-movers/ — топ-10 монет по изменению цены за 24ч"""
 
+    @handle_not_found
     def get(self, request):
-        try:
-            top_movers = analytics_top_movers()
-        except ValueError as e:
-            return Response(data={'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
-
+        top_movers = analytics_top_movers()
         serializer = CoinPriceSerializer(top_movers, many=True)
         return Response(serializer.data)
 
@@ -103,11 +100,8 @@ class AnalyticsTopMoversApi(views.APIView):
 class AnalyticsVolumeLeaders(views.APIView):
     """GET /api/analytics/volume-leaders/ — топ-10 монет по объёму торгов"""
 
+    @handle_not_found
     def get(self, request):
-        try:
-            coin_leaders = analytics_volume_leaders()
-        except ValueError as e:
-            return Response(data={'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
-
+        coin_leaders = analytics_volume_leaders()
         serializer = CoinPriceSerializer(coin_leaders, many=True)
         return Response(serializer.data)

@@ -44,6 +44,16 @@ class AnalyticsApiWithDataTests(APITestCase):
             snapshot=snapshot_2
         )
 
+
+    def _create_coins_for_snapshot(self, snapshot, count):
+        for i in range(1, count + 1):
+            CoinPrice.objects.create(
+                coin_id=f'test_{i}', name=f'Test_{i}', symbol=f'test_{i}',
+                price=10, market_cap=10, total_volume=100 * i,
+                price_change_percentage_24h=i, snapshot=snapshot
+            )
+
+
     def test_analyticsmarket_stats_get_correct(self):
         """Проверяет, что запрос к market-stats возвращает корректные значения"""
         response = self.client.get('/api/analytics/market-stats/')
@@ -52,6 +62,8 @@ class AnalyticsApiWithDataTests(APITestCase):
         self.assertEqual(float(response.data['min_price']), 50)
         self.assertEqual(float(response.data['max_price']), 500)
         self.assertEqual(float(response.data['total_market_cap']), 5500)
+        #258,33
+        self.assertAlmostEqual(float(response.data['avg_price']), 1550 / 6, places=2)
 
 
     def test_analytics_top_movers_get_correct(self):
@@ -70,6 +82,26 @@ class AnalyticsApiWithDataTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 6)
         self.assertEqual(response.data[0]['name'], 'Coin_5')
+
+
+    def test_analytics_volume_leaders_limited_to_10(self):
+        """Проверяет лимит топа volume-leaders"""
+        snapshot = Snapshot.objects.create()
+        self._create_coins_for_snapshot(snapshot, 21)
+        response = self.client.get('/api/analytics/volume-leaders/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 10)
+
+
+    def test_analytics_top_movers_limited_to_10(self):
+        """Проверяет лимит топа top-movers"""
+        snapshot = Snapshot.objects.create()
+        self._create_coins_for_snapshot(snapshot, 16)
+        response = self.client.get('/api/analytics/top-movers/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 10)
 
 
 class AnalyticsApiNoSnapshotsTests(APITestCase):
