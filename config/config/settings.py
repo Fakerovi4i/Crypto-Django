@@ -27,6 +27,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+INTERNAL_IPS = ['127.0.0.1']
+
 
 # Application definition
 
@@ -40,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_extensions',
     'crypto.apps.CryptoConfig',
+    'debug_toolbar',
 ]
 
 
@@ -51,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 
@@ -120,7 +124,7 @@ REST_FRAMEWORK = {
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.SessionAuthentication', #Для работы с сессиями в BrowsableAPIRenderer
     ],
 
     'DEFAULT_PERMISSION_CLASSES': [

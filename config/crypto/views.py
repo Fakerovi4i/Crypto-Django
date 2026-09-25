@@ -1,11 +1,15 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, views
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from crypto.models import Snapshot, CoinPrice
 from crypto.serializers import CoinPriceHistorySerializer, SnapshotListSerializer, SnapshotDetailSerializer, \
-    WatchlistItemSerializer
-from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_item_delete
+    WatchlistItemSerializer, AnalyticsMarketStatsSerializer, CoinPriceSerializer, CoinPriceFilterSerializer
+
+from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_item_delete, analytics_market_stats, \
+    analytics_top_movers, analytics_volume_leaders
+
+from crypto.decorators import handle_not_found
 
 
 class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
@@ -22,14 +26,21 @@ class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
 
 class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
     """Представление для истории цены"""
-    queryset = CoinPrice.objects.all()
+    queryset = CoinPrice.objects.select_related('snapshot')
     serializer_class = CoinPriceHistorySerializer
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        symbol = self.request.query_params.get('symbol')
-        if symbol:
-            queryset = queryset.filter(symbol__iexact=symbol)
+        filters = CoinPriceFilterSerializer(data=self.request.query_params)
+        filters.is_valid(raise_exception=True)
+
+        data = filters.validated_data
+        if 'symbol' in data:
+            queryset = queryset.filter(symbol__iexact=data['symbol'])
+        if 'min_price' in data:
+            queryset = queryset.filter(price__gte=data['min_price'])
+        if 'max_price' in data:
+            queryset = queryset.filter(price__lte=data['max_price'])
 
         return queryset.order_by('snapshot__source', 'snapshot__created_at')
 
@@ -66,3 +77,31 @@ class WatchlistViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class AnalyticsMarketStatsApi(views.APIView):
+    """GET /api/analytics/market-stats/ — статистика по последнему снапшоту"""
+
+    @handle_not_found
+    def get(self, request):
+        stats = analytics_market_stats()
+        serializer = AnalyticsMarketStatsSerializer(stats)
+        return Response(serializer.data)
+
+
+class AnalyticsTopMoversApi(views.APIView):
+    """GET /api/analytics/top-movers/ — топ-10 монет по изменению цены за 24ч"""
+
+    @handle_not_found
+    def get(self, request):
+        top_movers = analytics_top_movers()
+        serializer = CoinPriceSerializer(top_movers, many=True)
+        return Response(serializer.data)
+
+
+class AnalyticsVolumeLeaders(views.APIView):
+    """GET /api/analytics/volume-leaders/ — топ-10 монет по объёму торгов"""
+
+    @handle_not_found
+    def get(self, request):
+        coin_leaders = analytics_volume_leaders()
+        serializer = CoinPriceSerializer(coin_leaders, many=True)
+        return Response(serializer.data)
