@@ -182,22 +182,15 @@ SIMPLE_JWT = {
 
 LANGUAGE_CODE = 'ru-RU'
 
-
-TIME_ZONE = 'UTC'
-
+TIME_ZONE = 'Europe/Moscow'
+USE_TZ = True
 
 USE_I18N = True
 
-
-USE_TZ = True
-
-
 STATIC_URL = 'static/'
-
 
 # STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 # STATICFILES_DIRS = []
-
 
 # MEDIA_URL = 'media/'
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -211,3 +204,8 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+
+# Celery settings
+CELERY_BROKER_URL = "redis://localhost:6379"
+CELERY_RESULT_BACKEND = "redis://localhost:6379"
