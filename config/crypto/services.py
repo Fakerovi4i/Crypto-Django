@@ -5,6 +5,7 @@ from django.db.models.functions import Abs
 
 from crypto.models import WatchlistItem, Snapshot, CoinPrice
 from crypto.providers.base import BaseProvider
+from crypto.providers.entities import Coin
 from crypto.providers.provider_factory import get_provider
 
 
@@ -89,4 +90,26 @@ def analytics_volume_leaders() -> QuerySet:
     return coin_prices
 
 
+def fetch_and_save_snapshot() -> Snapshot:
+    provider: BaseProvider = get_provider()
+
+    with provider as p:
+        coins: list[Coin] = p.get_coins()
+
+    snapshot = Snapshot.objects.create(source="coingecko")
+
+    CoinPrice.objects.bulk_create([
+        CoinPrice(coin_id=c.id,
+                  name=c.name,
+                  symbol=c.symbol,
+                  price=c.price,
+                  market_cap=c.market_cap,
+                  total_volume=c.total_volume,
+                  price_change_percentage_24h=c.price_change_percentage_24h,
+                  snapshot=snapshot
+                  )
+        for c in coins
+    ])
+
+    return snapshot
 

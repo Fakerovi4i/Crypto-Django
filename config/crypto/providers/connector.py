@@ -13,8 +13,8 @@ class Connector:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.session.close()
 
-    # @retry(3, 2)
-    def get(self, url: str, params: dict) -> list[dict] | dict:
+
+    def get(self, url: str, params: dict, timeout: int = 10) -> list[dict] | dict:
         if self.session is None:
             raise RuntimeError("'Connector' должен использоваться как контекстный менеджер")
         response = self.session.get(url=url, params=params, headers=self.headers)
