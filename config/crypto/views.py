@@ -119,8 +119,5 @@ class FetchSnapshotApi(views.APIView):
 
 class FetchSnaphotStatusApi(views.APIView):
     def get(self, request, task_id: str):
-        if not task_exists(task_id):
-            return Response(data={'detail': 'Задачи с таким ID не существует'}, status=status.HTTP_400_BAD_REQUEST)
-
         result = AsyncResult(task_id)
         return Response({"task_id": result.id, "status": result.status, "result": str(result.result)})

@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Min, Max, Avg, Sum, QuerySet
 from django.db.models.functions import Abs
 
@@ -96,20 +96,20 @@ def fetch_and_save_snapshot() -> Snapshot:
     with provider as p:
         coins: list[Coin] = p.get_coins()
 
-    snapshot = Snapshot.objects.create(source="coingecko")
-
-    CoinPrice.objects.bulk_create([
-        CoinPrice(coin_id=c.id,
-                  name=c.name,
-                  symbol=c.symbol,
-                  price=c.price,
-                  market_cap=c.market_cap,
-                  total_volume=c.total_volume,
-                  price_change_percentage_24h=c.price_change_percentage_24h,
-                  snapshot=snapshot
-                  )
-        for c in coins
-    ])
+    with transaction.atomic():
+        snapshot = Snapshot.objects.create(source="coingecko")
+        CoinPrice.objects.bulk_create([
+            CoinPrice(coin_id=c.id,
+                      name=c.name,
+                      symbol=c.symbol,
+                      price=c.price,
+                      market_cap=c.market_cap,
+                      total_volume=c.total_volume,
+                      price_change_percentage_24h=c.price_change_percentage_24h,
+                      snapshot=snapshot
+                      )
+            for c in coins
+        ])
 
     return snapshot
 
