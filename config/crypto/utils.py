@@ -1,5 +1,3 @@
-from celery.result import AsyncResult
-from django.core.cache import cache
 import redis
 from django.conf import settings
 

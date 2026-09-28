@@ -12,7 +12,7 @@ from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_
 
 from crypto.decorators import handle_not_found
 from crypto.tasks import fetch_snapshot_task
-from crypto.tests.utils import task_exists
+from crypto.utils import task_exists
 
 
 class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
