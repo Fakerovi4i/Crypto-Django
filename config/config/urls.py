@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from crypto.views import SnapshotViewSet, CoinPriceHistory, WatchlistViewSet, AnalyticsMarketStatsApi, \
-    AnalyticsTopMoversApi, AnalyticsVolumeLeaders
+    AnalyticsTopMoversApi, AnalyticsVolumeLeadersApi, FetchSnapshotApi, FetchSnaphotStatusApi
 
 admin.site.site_header = "Панель администрирования"
 admin.site.index_title = "Анализатор крипто-валют"
@@ -23,7 +23,9 @@ urlpatterns = [
     path('__debug__/', include('debug_toolbar.urls')),
     path('api/analytics/market-stats/', AnalyticsMarketStatsApi.as_view(), name='analytics_market_stats'),
     path('api/analytics/top-movers/', AnalyticsTopMoversApi.as_view(), name='analytics_top_movers'),
-    path('api/analytics/volume-leaders/', AnalyticsVolumeLeaders.as_view(), name='analytics_volume_leaders'),
+    path('api/analytics/volume-leaders/', AnalyticsVolumeLeadersApi.as_view(), name='analytics_volume_leaders'),
+    path('api/fetch-snapshot/', FetchSnapshotApi.as_view(), name='fetch_snapshot'),
+    path('api/fetch-snapshot-status/<str:task_id>/', FetchSnaphotStatusApi.as_view(), name='fetch_snapshot_status'),
 ]
 
 
