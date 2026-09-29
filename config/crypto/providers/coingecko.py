@@ -1,3 +1,5 @@
+import os
+
 from crypto.providers.base import BaseProvider
 from crypto.providers.connector import Connector
 from crypto.providers.entities import Coin
@@ -10,6 +12,12 @@ class ProviderCoingecko(BaseProvider):
 
     def __init__(self, connector: Connector, host: str = HOST):
         super().__init__(connector, host)
+
+    @classmethod
+    def build_headers(cls) -> dict | None:
+        return {
+            "x-cg-demo-api-key": os.getenv("API_KEY")
+        }
 
     def get_coins(self, params: dict | None = None) -> list[Coin]:
         if params is None:
