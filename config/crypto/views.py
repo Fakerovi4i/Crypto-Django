@@ -1,3 +1,4 @@
+from celery.result import AsyncResult
 from rest_framework import viewsets, status, views
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -10,6 +11,7 @@ from crypto.services import watchlist_item_add, watchlist_items_list, watchlist_
     analytics_top_movers, analytics_volume_leaders
 
 from crypto.decorators import handle_not_found
+from crypto.tasks import fetch_snapshot_task
 
 
 class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
@@ -97,7 +99,7 @@ class AnalyticsTopMoversApi(views.APIView):
         return Response(serializer.data)
 
 
-class AnalyticsVolumeLeaders(views.APIView):
+class AnalyticsVolumeLeadersApi(views.APIView):
     """GET /api/analytics/volume-leaders/ — топ-10 монет по объёму торгов"""
 
     @handle_not_found
@@ -105,3 +107,19 @@ class AnalyticsVolumeLeaders(views.APIView):
         coin_leaders = analytics_volume_leaders()
         serializer = CoinPriceSerializer(coin_leaders, many=True)
         return Response(serializer.data)
+
+
+class FetchSnapshotApi(views.APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        result = fetch_snapshot_task.delay()
+        return Response({"task_id": result.id}, status=status.HTTP_202_ACCEPTED)
+
+class FetchSnaphotStatusApi(views.APIView):
+    permission_classes = (IsAuthenticated,)
+
+
+    def get(self, request, task_id: str):
+        result = AsyncResult(task_id)
+        return Response({"task_id": result.id, "status": result.status, "result": str(result.result)})

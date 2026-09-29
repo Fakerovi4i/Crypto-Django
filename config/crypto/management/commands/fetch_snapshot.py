@@ -1,31 +1,19 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
-from crypto.models import CoinPrice, Snapshot
-from crypto.providers.coingecko import ProviderCoingecko
-from crypto.providers.connector import Connector
-from crypto.providers.entities import Coin
+from crypto.tasks import fetch_snapshot_task
 
 
 class Command(BaseCommand):
     help = "Запрашивает данные с API биржи и сохраняет снимок рынка в БД"
 
     def handle(self, *args, **options):
-        with ProviderCoingecko(connector=Connector()) as provider:
-            coins: list[Coin] = provider.get_coins()
+        result = fetch_snapshot_task.delay()
+        self.stdout.write(f"Задача запущена: {result.id}, ожидаю...")
+        try:
+            data = result.get(timeout=10)
+        except Exception as e:
+            raise CommandError(f"Сбор снимка не удался: {e}")
+        self.stdout.write(self.style.SUCCESS(f"Снимок сохранен: {data}"))
 
-        snapshot = Snapshot.objects.create(source="coingecko")
 
-        CoinPrice.objects.bulk_create([
-            CoinPrice(coin_id=c.id,
-                      name=c.name,
-                      symbol=c.symbol,
-                      price=c.price,
-                      market_cap=c.market_cap,
-                      total_volume=c.total_volume,
-                      price_change_percentage_24h=c.price_change_percentage_24h,
-                      snapshot=snapshot
-                      )
-            for c in coins
-        ])
 
-        self.stdout.write(self.style.SUCCESS(f"Сохранен снимок {snapshot.pk}. Кол-во монет: {len(coins)}"))
