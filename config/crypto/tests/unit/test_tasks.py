@@ -8,9 +8,9 @@ from crypto.tasks import fetch_snapshot_task
 
 class TestFetchSnapshotTask(SimpleTestCase):
     def setUp(self):
-        """Патчим рэдис из декоратра и fetch_and_save_snapshot"""
-        p1 = patch("crypto.decorators.redis.from_url")
-        self.from_url = p1.start()
+        """Патчим рэдис клиент из декоратра и fetch_and_save_snapshot"""
+        p1 = patch("crypto.decorators._redis_client")
+        self.redis_client = p1.start()
         self.addCleanup(p1.stop)
 
         p2 = patch("crypto.tasks.fetch_and_save_snapshot")
@@ -18,7 +18,7 @@ class TestFetchSnapshotTask(SimpleTestCase):
         self.addCleanup(p2.stop)
 
         #мокаем получение рэдис
-        self.from_url.return_value.set.return_value = True
+        self.redis_client.set.return_value = True
 
     def test_fetch_snapshot_task_success(self):
         """Проверяем успешное выполнение задачи"""
@@ -42,7 +42,7 @@ class TestFetchSnapshotTask(SimpleTestCase):
 
     def test_one_instance_already_running(self):
         """Проверяем, что задача пропустится, если одна из задач уже выполняется"""
-        self.from_url.return_value.set.return_value = None  # лок занят
+        self.redis_client.set.return_value = None  # лок занят
         result = fetch_snapshot_task.apply()
         self.assertEqual(result.get(), {"skipped": True})
         self.fetch_and_save_snapshot.assert_not_called()

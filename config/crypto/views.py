@@ -117,6 +117,9 @@ class FetchSnapshotApi(views.APIView):
         return Response({"task_id": result.id}, status=status.HTTP_202_ACCEPTED)
 
 class FetchSnaphotStatusApi(views.APIView):
+    permission_classes = (IsAuthenticated,)
+
+
     def get(self, request, task_id: str):
         result = AsyncResult(task_id)
         return Response({"task_id": result.id, "status": result.status, "result": str(result.result)})
