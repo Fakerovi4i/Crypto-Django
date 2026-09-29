@@ -7,6 +7,7 @@ from crypto.models import WatchlistItem, Snapshot, CoinPrice
 from crypto.providers.base import BaseProvider
 from crypto.providers.entities import Coin
 from crypto.providers.provider_factory import get_provider
+from config.settings import EXCHANGE_PROVIDER
 
 
 def watchlist_item_add(*, symbol: str, user: User) -> QuerySet:
@@ -97,7 +98,7 @@ def fetch_and_save_snapshot() -> Snapshot:
         coins: list[Coin] = p.get_coins()
 
     with transaction.atomic():
-        snapshot = Snapshot.objects.create(source="coingecko")
+        snapshot = Snapshot.objects.create(source=EXCHANGE_PROVIDER)
         CoinPrice.objects.bulk_create([
             CoinPrice(coin_id=c.id,
                       name=c.name,
