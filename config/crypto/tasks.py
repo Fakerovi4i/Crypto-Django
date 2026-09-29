@@ -1,10 +1,7 @@
-from time import sleep
-
-import requests
 from celery import shared_task
 
 from crypto.decorators import single_instance
-from crypto.providers.exeptions import TemporaryProviderError
+from crypto.providers.exceptions import TemporaryProviderError
 from crypto.services import fetch_and_save_snapshot
 
 

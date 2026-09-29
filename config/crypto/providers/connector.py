@@ -1,6 +1,6 @@
 import requests
 
-from crypto.providers.exeptions import TemporaryProviderError, PermanentProviderError
+from crypto.providers.exceptions import TemporaryProviderError, PermanentProviderError
 
 
 class Connector:
