@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 
-EXCHANGE_PROVIDER = os.getenv('EXCHANGE_PROVIDER')
+EXCHANGE_PROVIDER = os.environ['EXCHANGE_PROVIDER']
 
 DEBUG = True
 

@@ -1,3 +1,5 @@
+from typing import Any
+
 import requests
 
 from crypto.providers.exceptions import TemporaryProviderError, PermanentProviderError
@@ -16,7 +18,7 @@ class Connector:
         self.session.close()
 
 
-    def get(self, url: str, params: dict, timeout: int = 10) -> list[dict] | dict:
+    def get(self, url: str, params: dict, timeout: int = 10) -> Any:
         if self.session is None:
             raise RuntimeError("'Connector' должен использоваться как контекстный менеджер")
 

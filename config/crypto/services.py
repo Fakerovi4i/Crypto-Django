@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from django.db.models import Min, Max, Avg, Sum, QuerySet
@@ -10,7 +12,7 @@ from crypto.providers.provider_factory import get_provider
 from django.conf import settings
 
 
-def watchlist_item_add(*, symbol: str, user: User) -> QuerySet:
+def watchlist_item_add(*, symbol: str, user: User) -> WatchlistItem:
     """Добавляет symbol в watchlist"""
 
     symbol = symbol.lower()
@@ -25,18 +27,18 @@ def watchlist_item_add(*, symbol: str, user: User) -> QuerySet:
     return item
 
 
-def watchlist_items_list(*, user: User) -> QuerySet:
+def watchlist_items_list(*, user: User) -> QuerySet[WatchlistItem]:
     return WatchlistItem.objects.filter(user=user)
 
 
-def watchlist_item_delete(*, user: User, item_id: int) -> None:
+def watchlist_item_delete(*, user: User, item_id: str) -> None:
     try:
-        item_id = int(item_id)
+        item_pk = int(item_id)
     except (ValueError, TypeError):
         raise ValueError(f"Item {item_id} not found")
 
     try:
-        item = WatchlistItem.objects.get(user=user, id=item_id)
+        item = WatchlistItem.objects.get(user=user, id=item_pk)
     except WatchlistItem.DoesNotExist:
         raise ValueError(f"Item {item_id} not found")
     item.delete()
@@ -50,7 +52,7 @@ def _get_latest_snapshot_helper() -> Snapshot:
     return latest_snapshot
 
 
-def analytics_market_stats() -> dict:
+def analytics_market_stats() -> dict[str, Decimal]:
     """Возвращает статистику по рынку"""
     snapshot = _get_latest_snapshot_helper()
 
@@ -67,7 +69,7 @@ def analytics_market_stats() -> dict:
     return stats
 
 
-def analytics_top_movers() -> QuerySet:
+def analytics_top_movers() -> QuerySet[CoinPrice]:
     """Возвращает до 10 монет по изменению цены за 24 часа"""
     snapshot = _get_latest_snapshot_helper()
 
@@ -80,7 +82,7 @@ def analytics_top_movers() -> QuerySet:
     return coin_prices
 
 
-def analytics_volume_leaders() -> QuerySet:
+def analytics_volume_leaders() -> QuerySet[CoinPrice]:
     """Возвращает список до 10 монет по максимальному обьему торгов"""
     snapshot = _get_latest_snapshot_helper()
 

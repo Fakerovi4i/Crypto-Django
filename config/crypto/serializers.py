@@ -1,3 +1,6 @@
+from decimal import Decimal
+from typing import Any
+
 from rest_framework import serializers
 from crypto.models import Snapshot, CoinPrice, WatchlistItem
 
@@ -8,9 +11,9 @@ class CoinPriceFilterSerializer(serializers.Serializer):
     min_price = serializers.DecimalField(max_digits=20, decimal_places=8, required=False, min_value=0)
     max_price = serializers.DecimalField(max_digits=20, decimal_places=8, required=False, min_value=0)
 
-    def validate(self, attrs):
-        min_price = attrs.get('min_price')
-        max_price = attrs.get('max_price')
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        min_price: Decimal | None = attrs.get('min_price')
+        max_price: Decimal | None = attrs.get('max_price')
         if min_price is not None and max_price is not None and min_price > max_price:
             raise serializers.ValidationError(
                 'min_price не может быть больше max_price'
@@ -45,7 +48,8 @@ class SnapshotDetailSerializer(serializers.ModelSerializer):
 class CoinPriceHistorySerializer(serializers.ModelSerializer):
     """Сериализатор для CoinPriceHistory api/coins"""
     snapshot_date = serializers.DateTimeField(source='snapshot.created_at', read_only=True)
-    source = serializers.CharField(source='snapshot.source', read_only=True)
+    # DRF: у базового Field уже есть атрибут source, имя поля менять нельзя (контракт API)
+    source = serializers.CharField(source='snapshot.source', read_only=True) # type: ignore[assignment]
 
     class Meta:
         model = CoinPrice

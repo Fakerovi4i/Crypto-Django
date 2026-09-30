@@ -1,7 +1,13 @@
+from typing import Any, cast
+
 from celery.result import AsyncResult
+from django.contrib.auth.models import User
+from django.db.models import QuerySet
 from rest_framework import viewsets, status, views
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.serializers import ModelSerializer
 
 from crypto.models import Snapshot, CoinPrice
 from crypto.serializers import CoinPriceHistorySerializer, SnapshotListSerializer, SnapshotDetailSerializer, \
@@ -19,7 +25,7 @@ class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Snapshot.objects.all()
 
     # Переопределяем метод get_serializer_class для возвращения разных сериализаторов в зависимости от действия
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type[ModelSerializer]:
         if self.action == 'list':
             return SnapshotListSerializer
         # Тут вызывается retrieve
@@ -31,7 +37,7 @@ class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
     queryset = CoinPrice.objects.select_related('snapshot')
     serializer_class = CoinPriceHistorySerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[CoinPrice]:
         queryset = super().get_queryset()
         filters = CoinPriceFilterSerializer(data=self.request.query_params)
         filters.is_valid(raise_exception=True)
@@ -51,13 +57,13 @@ class WatchlistViewSet(viewsets.ViewSet):
     """Представление для Watchlist"""
     permission_classes = (IsAuthenticated,)
 
-    def create(self, request):
+    def create(self, request: Request) -> Response:
         input_serializer = WatchlistItemSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
 
         try:
             item = watchlist_item_add(
-                user=request.user,
+                user=cast(User, request.user),
                 symbol=input_serializer.validated_data['coin_symbol']
             )
         except ValueError as e:
@@ -66,14 +72,14 @@ class WatchlistViewSet(viewsets.ViewSet):
         output_serializer = WatchlistItemSerializer(item)
         return Response(output_serializer.data, status=status.HTTP_201_CREATED)
 
-    def list(self, request):
-        items = watchlist_items_list(user=request.user)
+    def list(self, request: Request) -> Response:
+        items = watchlist_items_list(user=cast(User, request.user))
         serializer = WatchlistItemSerializer(items, many=True)
         return Response(serializer.data)
 
-    def destroy(self, request, pk=None):
+    def destroy(self, request: Request, pk: str) -> Response:
         try:
-            watchlist_item_delete(user=request.user, item_id=pk)
+            watchlist_item_delete(user=cast(User, request.user), item_id=pk)
         except ValueError as e:
             return Response(data={'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -83,7 +89,7 @@ class AnalyticsMarketStatsApi(views.APIView):
     """GET /api/analytics/market-stats/ — статистика по последнему снапшоту"""
 
     @handle_not_found
-    def get(self, request):
+    def get(self, request) -> Response:
         stats = analytics_market_stats()
         serializer = AnalyticsMarketStatsSerializer(stats)
         return Response(serializer.data)
@@ -93,7 +99,7 @@ class AnalyticsTopMoversApi(views.APIView):
     """GET /api/analytics/top-movers/ — топ-10 монет по изменению цены за 24ч"""
 
     @handle_not_found
-    def get(self, request):
+    def get(self, request: Request) -> Response:
         top_movers = analytics_top_movers()
         serializer = CoinPriceSerializer(top_movers, many=True)
         return Response(serializer.data)
@@ -103,7 +109,7 @@ class AnalyticsVolumeLeadersApi(views.APIView):
     """GET /api/analytics/volume-leaders/ — топ-10 монет по объёму торгов"""
 
     @handle_not_found
-    def get(self, request):
+    def get(self, request: Request) -> Response:
         coin_leaders = analytics_volume_leaders()
         serializer = CoinPriceSerializer(coin_leaders, many=True)
         return Response(serializer.data)
@@ -112,7 +118,7 @@ class AnalyticsVolumeLeadersApi(views.APIView):
 class FetchSnapshotApi(views.APIView):
     permission_classes = (IsAuthenticated,)
 
-    def post(self, request):
+    def post(self, request) -> Response:
         result = fetch_snapshot_task.delay()
         return Response({"task_id": result.id}, status=status.HTTP_202_ACCEPTED)
 
@@ -120,6 +126,6 @@ class FetchSnaphotStatusApi(views.APIView):
     permission_classes = (IsAuthenticated,)
 
 
-    def get(self, request, task_id: str):
-        result = AsyncResult(task_id)
+    def get(self, request, task_id: str) -> Response:
+        result: AsyncResult[Any] = AsyncResult(task_id)
         return Response({"task_id": result.id, "status": result.status, "result": str(result.result)})
