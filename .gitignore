@@ -22,5 +22,7 @@ db-data/
 .DS_Store
 Thumbs.db
 
-
+celerybeat-schedule*
+.mypy_cache/
+my_test*
 hotkeys.txt
