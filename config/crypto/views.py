@@ -122,7 +122,7 @@ class FetchSnapshotApi(views.APIView):
         result = fetch_snapshot_task.delay()
         return Response({"task_id": result.id}, status=status.HTTP_202_ACCEPTED)
 
-class FetchSnaphotStatusApi(views.APIView):
+class FetchSnapshotStatusApi(views.APIView):
     permission_classes = (IsAuthenticated,)
 
 
