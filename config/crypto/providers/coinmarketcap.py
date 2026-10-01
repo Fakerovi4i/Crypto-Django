@@ -11,18 +11,15 @@ class ProviderCMC(BaseProvider):
     SIMPLE_PRICE_PATH = "/v2/simple/price"
 
     def __init__(
-            self,
-            connector: Connector,
-            host: str = HOST,
+        self,
+        connector: Connector,
+        host: str = HOST,
     ):
         super().__init__(connector, host)
 
     @classmethod
     def build_headers(cls) -> dict | None:
-        return {
-            "Accept": "application/json",
-            "X-CMC_PRO_API_KEY": os.getenv("API_KEY")
-        }
+        return {"Accept": "application/json", "X-CMC_PRO_API_KEY": os.getenv("API_KEY")}
 
     def get_coins(self, params: dict | None = None) -> list[Coin]:
         if params is None:
@@ -37,18 +34,16 @@ class ProviderCMC(BaseProvider):
                 price_change_percentage_24h=item["quote"][0]["percent_change_24h"],
                 total_volume=item["quote"][0]["volume_24h"],
                 market_cap=item["quote"][0]["market_cap"],
-                price=item["quote"][0]["price"]
+                price=item["quote"][0]["price"],
             )
             for item in raw_data
         ]
         return coins
 
-
     def fetch_raw(self, params: dict) -> list[dict]:
         url = self.host + self.MARKETS_PATH
         response: dict = self.connector.get(url=url, params=params)
         return response["data"]
-
 
     def symbol_exists(self, symbol: str) -> bool:
         url = self.host + self.SIMPLE_PRICE_PATH

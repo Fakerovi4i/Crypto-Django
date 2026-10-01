@@ -5,14 +5,9 @@ from crypto.providers.entities import Coin
 
 
 class BaseProvider(ABC):
-    def __init__(
-            self,
-            connector: Connector,
-            host: str
-    ):
+    def __init__(self, connector: Connector, host: str):
         self.connector = connector
         self.host = host
-
 
     def __enter__(self):
         self.connector.__enter__()

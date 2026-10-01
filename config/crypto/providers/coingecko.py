@@ -15,9 +15,7 @@ class ProviderCoingecko(BaseProvider):
 
     @classmethod
     def build_headers(cls) -> dict | None:
-        return {
-            "x-cg-demo-api-key": os.getenv("API_KEY")
-        }
+        return {"x-cg-demo-api-key": os.getenv("API_KEY")}
 
     def get_coins(self, params: dict | None = None) -> list[Coin]:
         if params is None:
@@ -32,18 +30,16 @@ class ProviderCoingecko(BaseProvider):
                 price_change_percentage_24h=item["price_change_percentage_24h"],
                 total_volume=item["total_volume"],
                 market_cap=item["market_cap"],
-                price=item["current_price"]
+                price=item["current_price"],
             )
             for item in raw_data
         ]
         return coins
 
-
     def fetch_raw(self, params: dict) -> list[dict]:
         url = self.host + self.MARKETS_PATH
         response: list[dict] = self.connector.get(url=url, params=params)
         return response
-
 
     def symbol_exists(self, symbol: str) -> bool:
         url = self.host + self.SIMPLE_PRICE_PATH

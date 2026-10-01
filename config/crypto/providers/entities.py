@@ -33,7 +33,6 @@ class Coin:
         elif not isinstance(self.price_change_percentage_24h, (int, float)):
             raise ValueError("price_change_percentage_24h must be a number")
 
-
     def __str__(self):
         return (
             f"class: {self.__class__.__name__} | "

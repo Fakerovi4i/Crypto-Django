@@ -1,8 +1,8 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from django.test import SimpleTestCase
 
-from crypto.providers.exceptions import TemporaryProviderError, PermanentProviderError
+from crypto.providers.exceptions import PermanentProviderError, TemporaryProviderError
 from crypto.tasks import fetch_snapshot_task
 
 
@@ -17,7 +17,7 @@ class TestFetchSnapshotTask(SimpleTestCase):
         self.fetch_and_save_snapshot = p2.start()
         self.addCleanup(p2.stop)
 
-        #мокаем получение рэдис
+        # мокаем получение рэдис
         self.redis_client.set.return_value = True
 
     def test_fetch_snapshot_task_success(self):
@@ -28,17 +28,17 @@ class TestFetchSnapshotTask(SimpleTestCase):
 
     def test_retries_temporary_error(self):
         """Проверяем, что задача выполняется с 3-мя ретраями и вызовом TemporaryProviderError"""
-        self.fetch_and_save_snapshot.side_effect = TemporaryProviderError('Temporary error')
+        self.fetch_and_save_snapshot.side_effect = TemporaryProviderError("Temporary error")
         result = fetch_snapshot_task.apply()
-        self.assertEqual(self.fetch_and_save_snapshot.call_count, 4)# 1+3 ретрая
-        self.assertEqual(result.state, 'FAILURE')
+        self.assertEqual(self.fetch_and_save_snapshot.call_count, 4)  # 1+3 ретрая
+        self.assertEqual(result.state, "FAILURE")
 
     def test_no_retries_permanent_error(self):
         """Проверяем, что задача выполняется с 1-й попыткой и вызовом PermanentProviderError"""
-        self.fetch_and_save_snapshot.side_effect = PermanentProviderError('Permanent error')
+        self.fetch_and_save_snapshot.side_effect = PermanentProviderError("Permanent error")
         result = fetch_snapshot_task.apply()
         self.assertEqual(self.fetch_and_save_snapshot.call_count, 1)
-        self.assertEqual(result.state, 'FAILURE')
+        self.assertEqual(result.state, "FAILURE")
 
     def test_one_instance_already_running(self):
         """Проверяем, что задача пропустится, если одна из задач уже выполняется"""
