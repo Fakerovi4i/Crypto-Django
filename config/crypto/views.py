@@ -4,13 +4,14 @@ from celery.result import AsyncResult
 from django.contrib.auth.models import User
 from django.db.models import QuerySet
 from rest_framework import status, views, viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer
 
 from crypto.decorators import handle_not_found
 from crypto.models import CoinPrice, Snapshot
+from crypto.permissions import IsAdminOrReadOnly
 from crypto.serializers import (
     AnalyticsMarketStatsSerializer,
     CoinPriceFilterSerializer,
@@ -34,6 +35,7 @@ from crypto.tasks import fetch_snapshot_task
 class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
     """Представление для Snapshot с вариантом списка и детализации"""
 
+    permission_classes = (AllowAny,)
     queryset = Snapshot.objects.all()
 
     # Переопределяем метод get_serializer_class для возвращения разных сериализаторов в зависимости от действия
@@ -129,7 +131,9 @@ class AnalyticsVolumeLeadersApi(views.APIView):
 
 
 class FetchSnapshotApi(views.APIView):
-    permission_classes = (IsAuthenticated,)
+    """Делает snapshot через celery worker"""
+
+    permission_classes = (IsAdminOrReadOnly,)
 
     def post(self, request: Request) -> Response:
         result = fetch_snapshot_task.delay()
