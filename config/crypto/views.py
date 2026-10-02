@@ -102,7 +102,7 @@ class AnalyticsMarketStatsApi(views.APIView):
     """GET /api/analytics/market-stats/ — статистика по последнему снапшоту"""
 
     @handle_not_found
-    def get(self, request) -> Response:
+    def get(self, request: Request) -> Response:
         stats = analytics_market_stats()
         serializer = AnalyticsMarketStatsSerializer(stats)
         return Response(serializer.data)
@@ -131,7 +131,7 @@ class AnalyticsVolumeLeadersApi(views.APIView):
 class FetchSnapshotApi(views.APIView):
     permission_classes = (IsAuthenticated,)
 
-    def post(self, request) -> Response:
+    def post(self, request: Request) -> Response:
         result = fetch_snapshot_task.delay()
         return Response({"task_id": result.id}, status=status.HTTP_202_ACCEPTED)
 
@@ -139,6 +139,6 @@ class FetchSnapshotApi(views.APIView):
 class FetchSnapshotStatusApi(views.APIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, task_id: str) -> Response:
+    def get(self, request: Request, task_id: str) -> Response:
         result: AsyncResult[Any] = AsyncResult(task_id)
         return Response({"task_id": result.id, "status": result.status, "result": str(result.result)})

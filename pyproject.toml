@@ -1,3 +1,8 @@
+[project]
+name = "crypto-analyzer"
+version = "0.1.0"
+requires-python = ">=3.14"
+
 [tool.mypy]
 python_version = "3.14"
 plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
