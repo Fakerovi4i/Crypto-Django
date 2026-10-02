@@ -6,10 +6,10 @@ from rest_framework.test import APITestCase
 
 class TestFetchSnapshotApi(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="12345")
+        self.user = User.objects.create_user(username="testuser", password="12345", is_staff=True)
 
     @patch("crypto.views.fetch_snapshot_task")
-    def test_start_task_return_202(self, mock_task):
+    def test_start_task_return_202_admin_permission_worked(self, mock_task):
         """Проверяем, что эндпоинт /api/fetch-snapshot/ возвращает 202 и id задачи"""
         self.client.force_authenticate(user=self.user)
         mock_task.delay.return_value = MagicMock(id="abc-123")
