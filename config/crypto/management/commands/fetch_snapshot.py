@@ -14,6 +14,3 @@ class Command(BaseCommand):
         except Exception as e:
             raise CommandError(f"Сбор снимка не удался: {e}")
         self.stdout.write(self.style.SUCCESS(f"Снимок сохранен: {data}"))
-
-
-

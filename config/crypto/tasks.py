@@ -14,4 +14,3 @@ from crypto.services import fetch_and_save_snapshot
 def fetch_snapshot_task():
     snapshot = fetch_and_save_snapshot()
     return {"snapshot_id": snapshot.pk}
-
