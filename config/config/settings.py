@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "django_extensions",
     "crypto.apps.CryptoConfig",
     "debug_toolbar",
+    "drf_spectacular",
 ]
 
 
@@ -138,6 +139,7 @@ REST_FRAMEWORK = {
         "user": "100/min",
         "admin": "1000/min",
     },
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 
