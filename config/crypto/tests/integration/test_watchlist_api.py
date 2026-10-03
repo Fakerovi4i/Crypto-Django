@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -11,6 +12,7 @@ from crypto.tests.helpers import make_mock_provider
 
 class WatchlistApiTests(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(username="user_1", password="1234")
         self.other_user = User.objects.create_user(username="user_2", password="12345")
 

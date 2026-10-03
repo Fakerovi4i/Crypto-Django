@@ -1,4 +1,3 @@
-# TODO: Написать тест  анонимный пользователь получает 429 после превышения лимита
 from typing import TYPE_CHECKING
 
 from rest_framework.throttling import UserRateThrottle

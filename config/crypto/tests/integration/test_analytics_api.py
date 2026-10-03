@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -8,6 +9,7 @@ class AnalyticsApiWithDataTests(APITestCase):
     """Снэпшот с монетами — проверка реальных значений"""
 
     def setUp(self):
+        cache.clear()
         snapshot_1 = Snapshot.objects.create()
         snapshot_2 = Snapshot.objects.create()
 
@@ -107,6 +109,9 @@ class AnalyticsApiWithDataTests(APITestCase):
 class AnalyticsApiNoSnapshotsTests(APITestCase):
     """БД пуста, снэпшотов нет"""
 
+    def setUp(self):
+        cache.clear()
+
     def test_analytics_market_stats_return_404(self):
         response = self.client.get("/api/analytics/market-stats/")
 
@@ -130,6 +135,7 @@ class AnalyticsApiEmptySnapshotTests(APITestCase):
     """Снэпшот есть, монет в нём нет"""
 
     def setUp(self):
+        cache.clear()
         Snapshot.objects.create()
 
     def test_analyticsmarket_stats_returns_404_no_data(self):
