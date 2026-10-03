@@ -3,7 +3,8 @@ from typing import Any, cast
 from celery.result import AsyncResult
 from django.contrib.auth.models import User
 from django.db.models import QuerySet
-from rest_framework import status, views, viewsets
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
+from rest_framework import serializers, status, views, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -32,6 +33,10 @@ from crypto.services import (
 from crypto.tasks import fetch_snapshot_task
 
 
+@extend_schema_view(
+    list=extend_schema(summary="Получить список снимков", responses=SnapshotListSerializer),
+    retrieve=extend_schema(summary="Получить детализацию снимка", responses=SnapshotDetailSerializer),
+)
 class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
     """Представление для Snapshot с вариантом списка и детализации"""
 
@@ -46,6 +51,10 @@ class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
         return SnapshotDetailSerializer
 
 
+@extend_schema_view(
+    list=extend_schema(summary="Получить все монеты из всех снимков", parameters=[CoinPriceFilterSerializer]),
+    retrieve=extend_schema(summary="Получить монету по id"),
+)
 class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
     """Представление для истории цены"""
 
@@ -68,10 +77,17 @@ class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
         return queryset.order_by("snapshot__source", "snapshot__created_at")
 
 
+@extend_schema_view(
+    create=extend_schema(summary="Добавить монету в watchlist", responses={201: WatchlistItemSerializer}),
+    list=extend_schema(summary="Список монет в watchlist"),
+    destroy=extend_schema(summary="Удалить монету из watchlist", responses={204: None}),
+)
 class WatchlistViewSet(viewsets.ViewSet):
     """Представление для Watchlist"""
 
     permission_classes = (IsAuthenticated,)
+    # Для документации
+    serializer_class = WatchlistItemSerializer
 
     def create(self, request: Request) -> Response:
         input_serializer = WatchlistItemSerializer(data=request.data)
@@ -103,6 +119,7 @@ class WatchlistViewSet(viewsets.ViewSet):
 class AnalyticsMarketStatsApi(views.APIView):
     """GET /api/analytics/market-stats/ — статистика по последнему снапшоту"""
 
+    @extend_schema(summary="Получить статистику по последнему снимку монет", responses=AnalyticsMarketStatsSerializer)
     @handle_not_found
     def get(self, request: Request) -> Response:
         stats = analytics_market_stats()
@@ -113,6 +130,7 @@ class AnalyticsMarketStatsApi(views.APIView):
 class AnalyticsTopMoversApi(views.APIView):
     """GET /api/analytics/top-movers/ — топ-10 монет по изменению цены за 24ч"""
 
+    @extend_schema(summary="Получить топ 10 монет по изменению за 24 часа", responses=CoinPriceSerializer(many=True))
     @handle_not_found
     def get(self, request: Request) -> Response:
         top_movers = analytics_top_movers()
@@ -123,6 +141,7 @@ class AnalyticsTopMoversApi(views.APIView):
 class AnalyticsVolumeLeadersApi(views.APIView):
     """GET /api/analytics/volume-leaders/ — топ-10 монет по объёму торгов"""
 
+    @extend_schema(summary="Получить топ 10 монет по объему торгов", responses=CoinPriceSerializer(many=True))
     @handle_not_found
     def get(self, request: Request) -> Response:
         coin_leaders = analytics_volume_leaders()
@@ -135,6 +154,11 @@ class FetchSnapshotApi(views.APIView):
 
     permission_classes = (IsAdminOrReadOnly,)
 
+    @extend_schema(
+        summary="Запустить сбор снимка (только админ)",
+        request=None,
+        responses={202: inline_serializer("FetchSnapshotResponse", {"task_id": serializers.CharField()})},
+    )
     def post(self, request: Request) -> Response:
         result = fetch_snapshot_task.delay()
         return Response({"task_id": result.id}, status=status.HTTP_202_ACCEPTED)
@@ -143,6 +167,13 @@ class FetchSnapshotApi(views.APIView):
 class FetchSnapshotStatusApi(views.APIView):
     permission_classes = (IsAuthenticated,)
 
+    @extend_schema(
+        summary="Получить статус задачи по id задачи",
+        responses=inline_serializer(
+            "FetchSnapshotStatusResponse",
+            {"task_id": serializers.CharField(), "status": serializers.CharField(), "result": serializers.CharField()},
+        ),
+    )
     def get(self, request: Request, task_id: str) -> Response:
         result: AsyncResult[Any] = AsyncResult(task_id)
         return Response({"task_id": result.id, "status": result.status, "result": str(result.result)})
