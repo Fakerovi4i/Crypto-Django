@@ -124,7 +124,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication",  # Для работы с сессиями в BrowsableAPIRenderer
+        # "rest_framework.authentication.SessionAuthentication",  # Для работы с сессиями в BrowsableAPIRenderer
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
@@ -140,6 +140,17 @@ REST_FRAMEWORK = {
         "admin": "1000/min",
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Post API",  # название проекта
+    "VERSION": "0.0.1",  # версия проекта
+    "SERVE_INCLUDE_SCHEMA": False,  # исключить эндпоинт /schema
+    "SWAGGER_UI_SETTINGS": {
+        "filter": True,  # включить поиск по тегам
+    },
+    "COMPONENT_SPLIT_REQUEST": True,
 }
 
 
