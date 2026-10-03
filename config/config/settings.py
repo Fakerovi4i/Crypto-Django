@@ -128,6 +128,16 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "crypto.throttles.RegularUserRateThrottle",
+        "crypto.throttles.AdminRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "5/min",
+        "user": "100/min",
+        "admin": "1000/min",
+    },
 }
 
 
