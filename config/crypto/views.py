@@ -36,10 +36,11 @@ from crypto.services import (
 from crypto.tasks import fetch_snapshot_task
 
 
+@extend_schema(tags=["Snapshot"])
 @extend_schema_view(
     list=extend_schema(
         summary="Получить список снимков",
-        responses=SnapshotListSerializer,
+        responses=SnapshotListSerializer(many=True),
         parameters=[
             OpenApiParameter("ordering", type=str, description="created_at, total_market_cap, '-' обратный порядок")
         ],
@@ -70,6 +71,7 @@ class CoinPriceCursorPagination(CursorPagination):
     ordering = "-id"
 
 
+@extend_schema(tags=["CoinPriceHistory"])
 @extend_schema_view(
     list=extend_schema(summary="Получить все монеты из всех снимков"),
     retrieve=extend_schema(summary="Получить монету по id"),
@@ -85,6 +87,7 @@ class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
     pagination_class = CoinPriceCursorPagination
 
 
+@extend_schema(tags=["Watchlist"])
 @extend_schema_view(
     create=extend_schema(summary="Добавить монету в watchlist", responses={201: WatchlistItemSerializer}),
     list=extend_schema(summary="Список монет в watchlist"),
@@ -97,7 +100,7 @@ class WatchlistViewSet(viewsets.ViewSet):
     # Для документации
     serializer_class = WatchlistItemSerializer
 
-    def create(self, request: Request) -> Response:
+    def create(self, request: Request, *args, **kwargs) -> Response:
         input_serializer = WatchlistItemSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
 
@@ -111,12 +114,12 @@ class WatchlistViewSet(viewsets.ViewSet):
         output_serializer = WatchlistItemSerializer(item)
         return Response(output_serializer.data, status=status.HTTP_201_CREATED)
 
-    def list(self, request: Request) -> Response:
+    def list(self, request: Request, *args, **kwargs) -> Response:
         items = watchlist_items_list(user=cast(User, request.user))
         serializer = WatchlistItemSerializer(items, many=True)
         return Response(serializer.data)
 
-    def destroy(self, request: Request, pk: str) -> Response:
+    def destroy(self, request: Request, pk: str, *args, **kwargs) -> Response:
         try:
             watchlist_item_delete(user=cast(User, request.user), item_id=pk)
         except ValueError as e:
@@ -124,39 +127,43 @@ class WatchlistViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["Analytics"])
 class AnalyticsMarketStatsApi(views.APIView):
     """GET /api/analytics/market-stats/ — статистика по последнему снапшоту"""
 
     @extend_schema(summary="Получить статистику по последнему снимку монет", responses=AnalyticsMarketStatsSerializer)
     @handle_not_found
-    def get(self, request: Request) -> Response:
+    def get(self, request: Request, *args, **kwargs) -> Response:
         stats = analytics_market_stats()
         serializer = AnalyticsMarketStatsSerializer(stats)
         return Response(serializer.data)
 
 
+@extend_schema(tags=["Analytics"])
 class AnalyticsTopMoversApi(views.APIView):
     """GET /api/analytics/top-movers/ — топ-10 монет по изменению цены за 24ч"""
 
     @extend_schema(summary="Получить топ 10 монет по изменению за 24 часа", responses=CoinPriceSerializer(many=True))
     @handle_not_found
-    def get(self, request: Request) -> Response:
+    def get(self, request: Request, *args, **kwargs) -> Response:
         top_movers = analytics_top_movers()
         serializer = CoinPriceSerializer(top_movers, many=True)
         return Response(serializer.data)
 
 
+@extend_schema(tags=["Analytics"])
 class AnalyticsVolumeLeadersApi(views.APIView):
     """GET /api/analytics/volume-leaders/ — топ-10 монет по объёму торгов"""
 
     @extend_schema(summary="Получить топ 10 монет по объему торгов", responses=CoinPriceSerializer(many=True))
     @handle_not_found
-    def get(self, request: Request) -> Response:
+    def get(self, request: Request, *args, **kwargs) -> Response:
         coin_leaders = analytics_volume_leaders()
         serializer = CoinPriceSerializer(coin_leaders, many=True)
         return Response(serializer.data)
 
 
+@extend_schema(tags=["FetchSnapshot"])
 class FetchSnapshotApi(views.APIView):
     """Делает snapshot через celery worker"""
 
@@ -167,11 +174,12 @@ class FetchSnapshotApi(views.APIView):
         request=None,
         responses={202: inline_serializer("FetchSnapshotResponse", {"task_id": serializers.CharField()})},
     )
-    def post(self, request: Request) -> Response:
+    def post(self, request: Request, *args, **kwargs) -> Response:
         result = fetch_snapshot_task.delay()
         return Response({"task_id": result.id}, status=status.HTTP_202_ACCEPTED)
 
 
+@extend_schema(tags=["FetchSnapshot"])
 class FetchSnapshotStatusApi(views.APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -182,6 +190,6 @@ class FetchSnapshotStatusApi(views.APIView):
             {"task_id": serializers.CharField(), "status": serializers.CharField(), "result": serializers.CharField()},
         ),
     )
-    def get(self, request: Request, task_id: str) -> Response:
+    def get(self, request: Request, task_id: str, *args, **kwargs) -> Response:
         result: AsyncResult[Any] = AsyncResult(task_id)
         return Response({"task_id": result.id, "status": result.status, "result": str(result.result)})
