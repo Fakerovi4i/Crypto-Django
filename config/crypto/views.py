@@ -7,6 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers, status, views, viewsets
 from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.pagination import CursorPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -62,6 +63,13 @@ class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
         return SnapshotDetailSerializer
 
 
+class CoinPriceCursorPagination(CursorPagination):
+    """Курсор Пагинатор для CoinPriceHistory"""
+
+    page_size = 50
+    ordering = "-id"
+
+
 @extend_schema_view(
     list=extend_schema(summary="Получить все монеты из всех снимков"),
     retrieve=extend_schema(summary="Получить монету по id"),
@@ -69,11 +77,12 @@ class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
 class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
     """Представление для истории цены"""
 
-    queryset = CoinPrice.objects.select_related("snapshot").order_by("snapshot__source", "snapshot__created_at")
+    queryset = CoinPrice.objects.select_related("snapshot")
     serializer_class = CoinPriceHistorySerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = CoinPriceFilter
     search_fields = ["symbol", "name"]
+    pagination_class = CoinPriceCursorPagination
 
 
 @extend_schema_view(
