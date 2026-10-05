@@ -2,20 +2,22 @@ from typing import Any, cast
 
 from celery.result import AsyncResult
 from django.contrib.auth.models import User
-from django.db.models import QuerySet
-from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
+from django.db.models import Sum
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers, status, views, viewsets
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer
 
 from crypto.decorators import handle_not_found
+from crypto.filters import CoinPriceFilter
 from crypto.models import CoinPrice, Snapshot
 from crypto.permissions import IsAdminOrReadOnly
 from crypto.serializers import (
     AnalyticsMarketStatsSerializer,
-    CoinPriceFilterSerializer,
     CoinPriceHistorySerializer,
     CoinPriceSerializer,
     SnapshotDetailSerializer,
@@ -34,14 +36,23 @@ from crypto.tasks import fetch_snapshot_task
 
 
 @extend_schema_view(
-    list=extend_schema(summary="Получить список снимков", responses=SnapshotListSerializer),
+    list=extend_schema(
+        summary="Получить список снимков",
+        responses=SnapshotListSerializer,
+        parameters=[
+            OpenApiParameter("ordering", type=str, description="created_at, total_market_cap, '-' обратный порядок")
+        ],
+    ),
     retrieve=extend_schema(summary="Получить детализацию снимка", responses=SnapshotDetailSerializer),
 )
 class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
     """Представление для Snapshot с вариантом списка и детализации"""
 
     permission_classes = (AllowAny,)
-    queryset = Snapshot.objects.all()
+    queryset = Snapshot.objects.annotate(total_market_cap=Sum("coin_prices__market_cap"))
+    filter_backends = [OrderingFilter]
+    ordering_fields = ["created_at", "total_market_cap"]
+    ordering = ["-created_at"]
 
     # Переопределяем метод get_serializer_class для возвращения разных сериализаторов в зависимости от действия
     def get_serializer_class(self) -> type[ModelSerializer]:
@@ -52,29 +63,17 @@ class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 @extend_schema_view(
-    list=extend_schema(summary="Получить все монеты из всех снимков", parameters=[CoinPriceFilterSerializer]),
+    list=extend_schema(summary="Получить все монеты из всех снимков"),
     retrieve=extend_schema(summary="Получить монету по id"),
 )
 class CoinPriceHistory(viewsets.ReadOnlyModelViewSet):
     """Представление для истории цены"""
 
-    queryset = CoinPrice.objects.select_related("snapshot")
+    queryset = CoinPrice.objects.select_related("snapshot").order_by("snapshot__source", "snapshot__created_at")
     serializer_class = CoinPriceHistorySerializer
-
-    def get_queryset(self) -> QuerySet[CoinPrice]:
-        queryset = super().get_queryset()
-        filters = CoinPriceFilterSerializer(data=self.request.query_params)
-        filters.is_valid(raise_exception=True)
-
-        data = filters.validated_data
-        if "symbol" in data:
-            queryset = queryset.filter(symbol__iexact=data["symbol"])
-        if "min_price" in data:
-            queryset = queryset.filter(price__gte=data["min_price"])
-        if "max_price" in data:
-            queryset = queryset.filter(price__lte=data["max_price"])
-
-        return queryset.order_by("snapshot__source", "snapshot__created_at")
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = CoinPriceFilter
+    search_fields = ["symbol", "name"]
 
 
 @extend_schema_view(
