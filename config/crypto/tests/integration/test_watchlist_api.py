@@ -23,7 +23,7 @@ class WatchlistApiTests(APITestCase):
     def test_unauthenticated_request_401(self):
         """Проверяет, что неавторизованный запрос возвращает 401"""
         self.client.credentials()
-        response = self.client.get("/api/watchlist/")
+        response = self.client.get("/api/v1/watchlist/")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     @patch("crypto.services.get_provider")
@@ -31,7 +31,7 @@ class WatchlistApiTests(APITestCase):
         """Проверяет, что добавление в монеты работает корректно"""
         mock_get_provider.return_value = make_mock_provider(symbol_exists=True)
 
-        response = self.client.post("/api/watchlist/", {"coin_symbol": "btc"})
+        response = self.client.post("/api/v1/watchlist/", {"coin_symbol": "btc"})
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(WatchlistItem.objects.count(), 1)
@@ -42,7 +42,7 @@ class WatchlistApiTests(APITestCase):
         """Проверяет, что добавление в монеты с несуществующим символом возвращает 400"""
         mock_get_provider.return_value = make_mock_provider(symbol_exists=False)
 
-        response = self.client.post("/api/watchlist/", {"coin_symbol": "not_valid_symbol"})
+        response = self.client.post("/api/v1/watchlist/", {"coin_symbol": "not_valid_symbol"})
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(WatchlistItem.objects.count(), 0)
@@ -52,7 +52,7 @@ class WatchlistApiTests(APITestCase):
         WatchlistItem.objects.create(user=self.user, coin_symbol="eth")
         WatchlistItem.objects.create(user=self.other_user, coin_symbol="sol")
 
-        response = self.client.get("/api/watchlist/")
+        response = self.client.get("/api/v1/watchlist/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
@@ -63,7 +63,7 @@ class WatchlistApiTests(APITestCase):
         other_item = WatchlistItem.objects.create(user=self.other_user, coin_symbol="sol")
 
         # user try delete other_user item
-        response = self.client.delete(f"/api/watchlist/{other_item.pk}/")
+        response = self.client.delete(f"/api/v1/watchlist/{other_item.pk}/")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(WatchlistItem.objects.count(), 1)

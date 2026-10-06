@@ -14,7 +14,7 @@ class TestFetchSnapshotApi(APITestCase):
         self.client.force_authenticate(user=self.user)
         mock_task.delay.return_value = MagicMock(id="abc-123")
 
-        response = self.client.post("/api/fetch-snapshot/")
+        response = self.client.post("/api/v1/fetch-snapshot/")
 
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.data, {"task_id": "abc-123"})
@@ -22,7 +22,7 @@ class TestFetchSnapshotApi(APITestCase):
     def test_start_not_auth_401(self):
         """Проверяем, что эндпоинт /api/fetch-snapshot/ возвращает 401, если не отправлены учетные данные"""
 
-        response = self.client.post("/api/fetch-snapshot/")
+        response = self.client.post("/api/v1/fetch-snapshot/")
 
         self.assertEqual(response.status_code, 401)
 
@@ -33,7 +33,7 @@ class TestFetchSnapshotApi(APITestCase):
 
         mock_async_result.return_value = MagicMock(id="abc-123", status="SUCCESS", result={"snapshot_id": 7})
 
-        response = self.client.get("/api/fetch-snapshot-status/abc-123/")
+        response = self.client.get("/api/v1/fetch-snapshot-status/abc-123/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["task_id"], "abc-123")
@@ -49,7 +49,7 @@ class TestFetchSnapshotApi(APITestCase):
         self.client.force_authenticate(user=self.user)
         mock_async_result.return_value = MagicMock(id="nonexistent-id", status="PENDING", result=None)
 
-        response = self.client.get("/api/fetch-snapshot-status/nonexistent-id/")
+        response = self.client.get("/api/v1/fetch-snapshot-status/nonexistent-id/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["status"], "PENDING")
