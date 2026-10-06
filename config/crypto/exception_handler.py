@@ -14,6 +14,7 @@ ERROR_CODES = {
     status.HTTP_404_NOT_FOUND: "not_found",
     status.HTTP_405_METHOD_NOT_ALLOWED: "method_not_allowed",
     status.HTTP_429_TOO_MANY_REQUESTS: "throttled",
+    status.HTTP_500_INTERNAL_SERVER_ERROR: "server_error",
 }
 
 
