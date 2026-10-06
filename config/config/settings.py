@@ -24,7 +24,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 
 EXCHANGE_PROVIDER = os.environ["EXCHANGE_PROVIDER"]
 
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["*"]
 
@@ -125,7 +125,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication",  # Для работы с сессиями в BrowsableAPIRenderer
+        # "rest_framework.authentication.SessionAuthentication",  # Для работы с сессиями в BrowsableAPIRenderer
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
@@ -148,6 +148,7 @@ REST_FRAMEWORK = {
     "DEFAULT_VERSION": "v1",
     "ALLOWED_VERSIONS": ["v1"],
     "VERSION_PARAM": "version",
+    "EXCEPTION_HANDLER": "crypto.exception_handler.custom_exception_handler",
 }
 
 
@@ -229,6 +230,10 @@ MAILERS = {
 
 
 # Celery settings
-CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_RESULT_BACKEND = "redis://localhost:6379/1"
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/1"
 CELERY_RESULT_EXPIRES = 60 * 60 * 24
+
+CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {
+    "retry_policy": {"max_retries": 1, "interval_start": 0, "interval_step": 0.2, "interval_max": 0.2},
+}
