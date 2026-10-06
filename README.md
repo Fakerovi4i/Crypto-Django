@@ -10,15 +10,22 @@ python3 manage.py createsuperuser
 ```
 ### Необходимая инфраструктура:
 
-```text
-- python >= 3.14,
-- redis
+```
+- Python >= 3.14,
+- PostgreSQL
+- Redis
 ```
 
 ### Запуск
 
-```bash
-gunicorn config.wsgi:application
+```
+gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 \
+  --access-logfile - --error-logfile -
+```
+
+###Celery
+```
+celery -A config worker -l info
 ```
 
 ## Полезные ссылки

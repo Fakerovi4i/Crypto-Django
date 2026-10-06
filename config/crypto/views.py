@@ -15,7 +15,7 @@ from rest_framework.serializers import ModelSerializer
 
 from crypto.decorators import handle_not_found
 from crypto.filters import CoinPriceFilter
-from crypto.models import CoinPrice, Snapshot
+from crypto.models import CoinPrice, Snapshot, WatchlistItem
 from crypto.permissions import IsAdminOrReadOnly
 from crypto.serializers import (
     AnalyticsMarketStatsSerializer,
@@ -99,6 +99,7 @@ class WatchlistViewSet(viewsets.ViewSet):
     permission_classes = (IsAuthenticated,)
     # Для документации
     serializer_class = WatchlistItemSerializer
+    queryset = WatchlistItem.objects.all()
 
     def create(self, request: Request, *args, **kwargs) -> Response:
         input_serializer = WatchlistItemSerializer(data=request.data)
