@@ -7,9 +7,10 @@ from rest_framework.test import APITestCase
 class TestFetchSnapshotApi(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="12345", is_staff=True)
+        self.non_admin_user = User.objects.create_user(username="testuser2", password="12345")
 
     @patch("crypto.views.fetch_snapshot_task")
-    def test_start_task_return_202_admin_permission_worked(self, mock_task):
+    def test_fetch_start_task_return_202_admin_permission_worked(self, mock_task):
         """Проверяем, что эндпоинт /api/fetch-snapshot/ возвращает 202 и id задачи"""
         self.client.force_authenticate(user=self.user)
         mock_task.delay.return_value = MagicMock(id="abc-123")
@@ -19,8 +20,16 @@ class TestFetchSnapshotApi(APITestCase):
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.data, {"task_id": "abc-123"})
 
-    def test_start_not_auth_401(self):
-        """Проверяем, что эндпоинт /api/fetch-snapshot/ возвращает 401, если не отправлены учетные данные"""
+    def test_fetch_start_not_auth_401(self):
+        """Проверяем, что эндпоинт /api/fetch-snapshot/ возвращает 403, если не отправлены учетные данные"""
+        self.client.force_authenticate(user=self.non_admin_user)
+
+        response = self.client.post("/api/v1/fetch-snapshot/")
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_fetch_snapshot_not_admin_403(self):
+        """Проверяем, что эндпоинт /api/fetch-snapshot/ возвращает 403 для не админа"""
 
         response = self.client.post("/api/v1/fetch-snapshot/")
 

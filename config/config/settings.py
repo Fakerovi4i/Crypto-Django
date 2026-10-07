@@ -133,7 +133,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.AllowAny",
     ],
     "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.AnonRateThrottle",
+        "crypto.throttles.AnonRateThrottle",
         "crypto.throttles.RegularUserRateThrottle",
         "crypto.throttles.AdminRateThrottle",
     ],
@@ -151,6 +151,18 @@ REST_FRAMEWORK = {
     "ALLOWED_VERSIONS": ["v1"],
     "VERSION_PARAM": "version",
     "EXCEPTION_HANDLER": "crypto.exception_handler.custom_exception_handler",
+}
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/2",
+    },
+    "throttle": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/3",
+    },
 }
 
 

@@ -47,6 +47,9 @@ class WatchlistApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(WatchlistItem.objects.count(), 0)
 
+        self.assertIn("error", response.data)
+        self.assertIn("code", response.data)
+
     def test_user_can_see_only_own_items(self):
         """Проверяет, что пользователь может видеть только свои монеты"""
         WatchlistItem.objects.create(user=self.user, coin_symbol="eth")
@@ -80,3 +83,11 @@ class WatchlistApiTests(APITestCase):
         refresh_response = self.client.post("/api/token/refresh/", {"refresh": response.data["refresh"]})
         self.assertEqual(refresh_response.status_code, status.HTTP_200_OK)
         self.assertIn("access", refresh_response.data)
+
+    def test_delete_fomat_exeption_correct_404(self):
+        """Проверяет, что удаление с несуществующим ID возвращает верный формат ошибки"""
+        response = self.client.delete("/api/v1/watchlist/not_exist/")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("error", response.data)
+        self.assertIn("code", response.data)

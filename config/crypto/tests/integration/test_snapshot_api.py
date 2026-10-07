@@ -1,11 +1,11 @@
-from django.core.cache import cache
+from django.core.cache import caches
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 
 class SnapshotsApiTests(APITestCase):
     def setUp(self):
-        cache.clear()
+        caches["throttle"].clear()
 
     def test_snapshot_list_anonymous_200(self):
         """Аноним может читать список снимков"""

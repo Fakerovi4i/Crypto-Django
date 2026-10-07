@@ -6,6 +6,7 @@ from django.db.models import Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers, status, views, viewsets
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import CursorPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -110,7 +111,7 @@ class WatchlistViewSet(viewsets.ViewSet):
                 user=cast(User, request.user), symbol=input_serializer.validated_data["coin_symbol"]
             )
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError(str(e)) from e
 
         output_serializer = WatchlistItemSerializer(item)
         return Response(output_serializer.data, status=status.HTTP_201_CREATED)
@@ -124,7 +125,7 @@ class WatchlistViewSet(viewsets.ViewSet):
         try:
             watchlist_item_delete(user=cast(User, request.user), item_id=pk)
         except ValueError as e:
-            return Response(data={"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
+            raise NotFound(str(e)) from e
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
