@@ -1,3 +1,4 @@
+from django.core.cache import caches
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -8,6 +9,7 @@ class AnalyticsApiWithDataTests(APITestCase):
     """Снэпшот с монетами — проверка реальных значений"""
 
     def setUp(self):
+        caches["throttle"].clear()
         snapshot_1 = Snapshot.objects.create()
         snapshot_2 = Snapshot.objects.create()
 
@@ -60,7 +62,7 @@ class AnalyticsApiWithDataTests(APITestCase):
 
     def test_analyticsmarket_stats_get_correct(self):
         """Проверяет, что запрос к market-stats возвращает корректные значения"""
-        response = self.client.get("/api/analytics/market-stats/")
+        response = self.client.get("/api/v1/analytics/market-stats/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(float(response.data["min_price"]), 50)
@@ -71,7 +73,7 @@ class AnalyticsApiWithDataTests(APITestCase):
 
     def test_analytics_top_movers_get_correct(self):
         """Проверяет, что запрос к top-movers возвращает корректные значения"""
-        response = self.client.get("/api/analytics/top-movers/")
+        response = self.client.get("/api/v1/analytics/top-movers/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 6)
@@ -79,7 +81,7 @@ class AnalyticsApiWithDataTests(APITestCase):
 
     def test_analytics_volume_leaders_get_correct(self):
         """Проверяет, что запрос к volume-leaders возвращает корректные значения"""
-        response = self.client.get("/api/analytics/volume-leaders/")
+        response = self.client.get("/api/v1/analytics/volume-leaders/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 6)
@@ -89,7 +91,7 @@ class AnalyticsApiWithDataTests(APITestCase):
         """Проверяет лимит топа volume-leaders"""
         snapshot = Snapshot.objects.create()
         self._create_coins_for_snapshot(snapshot, 21)
-        response = self.client.get("/api/analytics/volume-leaders/")
+        response = self.client.get("/api/v1/analytics/volume-leaders/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 10)
@@ -98,7 +100,7 @@ class AnalyticsApiWithDataTests(APITestCase):
         """Проверяет лимит топа top-movers"""
         snapshot = Snapshot.objects.create()
         self._create_coins_for_snapshot(snapshot, 16)
-        response = self.client.get("/api/analytics/top-movers/")
+        response = self.client.get("/api/v1/analytics/top-movers/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 10)
@@ -107,48 +109,55 @@ class AnalyticsApiWithDataTests(APITestCase):
 class AnalyticsApiNoSnapshotsTests(APITestCase):
     """БД пуста, снэпшотов нет"""
 
+    def setUp(self):
+        caches["throttle"].clear()
+
     def test_analytics_market_stats_return_404(self):
-        response = self.client.get("/api/analytics/market-stats/")
+        """Проверяет, при пустой базе /api/v1/analytics/market-stats/ - 404"""
+        response = self.client.get("/api/v1/analytics/market-stats/")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data, {"detail": "No snapshots found"})
+        self.assertEqual(response.data, {"error": "No snapshots found", "code": "not_found"})
 
     def test_analytics_top_movers_return_404(self):
-        response = self.client.get("/api/analytics/top-movers/")
+        """Проверяет, при пустой базе /api/v1/analytics/top-movers/ - 404"""
+        response = self.client.get("/api/v1/analytics/top-movers/")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data, {"detail": "No snapshots found"})
+        self.assertEqual(response.data, {"error": "No snapshots found", "code": "not_found"})
 
     def test_analytics_volume_leaders_return_404(self):
-        response = self.client.get("/api/analytics/volume-leaders/")
+        """Проверяет, при пустой базе /api/v1/analytics/volume-leaders/ - 404"""
+        response = self.client.get("/api/v1/analytics/volume-leaders/")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data, {"detail": "No snapshots found"})
+        self.assertEqual(response.data, {"error": "No snapshots found", "code": "not_found"})
 
 
 class AnalyticsApiEmptySnapshotTests(APITestCase):
     """Снэпшот есть, монет в нём нет"""
 
     def setUp(self):
+        caches["throttle"].clear()
         Snapshot.objects.create()
 
     def test_analyticsmarket_stats_returns_404_no_data(self):
-        """Проверяет detail: No market data found"""
-        response = self.client.get("/api/analytics/market-stats/")
+        """Проверяет error: No market data found"""
+        response = self.client.get("/api/v1/analytics/market-stats/")
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data, {"detail": "No market data found"})
+        self.assertEqual(response.data, {"error": "No market data found", "code": "not_found"})
 
     def test_analytics_top_movers_return_empty_list(self):
         """Проверка, что ответ 200, но в данных пусто для top-movers"""
-        response = self.client.get("/api/analytics/top-movers/")
+        response = self.client.get("/api/v1/analytics/top-movers/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, [])
 
     def test_analytics_volume_leaders_return_empty_list(self):
         """Проверка, что ответ 200, но в данных пусто для volume-leaders"""
-        response = self.client.get("/api/analytics/volume-leaders/")
+        response = self.client.get("/api/v1/analytics/volume-leaders/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, [])

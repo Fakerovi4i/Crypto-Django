@@ -27,3 +27,4 @@ celerybeat-schedule*
 desktop.ini
 my_test*
 hotkeys.txt
+staticfiles/

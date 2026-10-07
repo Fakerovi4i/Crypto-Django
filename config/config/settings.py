@@ -24,7 +24,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 
 EXCHANGE_PROVIDER = os.environ["EXCHANGE_PROVIDER"]
 
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["*"]
 
@@ -34,6 +34,7 @@ INTERNAL_IPS = ["127.0.0.1"]
 # Application definition
 
 INSTALLED_APPS = [
+    # "whitenoise.runserver_nostatic",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -44,11 +45,14 @@ INSTALLED_APPS = [
     "django_extensions",
     "crypto.apps.CryptoConfig",
     "debug_toolbar",
+    "drf_spectacular",
+    "django_filters",
 ]
 
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -123,11 +127,53 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication",  # Для работы с сессиями в BrowsableAPIRenderer
+        # "rest_framework.authentication.SessionAuthentication",  # Для работы с сессиями в BrowsableAPIRenderer
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "crypto.throttles.AnonRateThrottle",
+        "crypto.throttles.RegularUserRateThrottle",
+        "crypto.throttles.AdminRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "5/min",
+        "user": "100/min",
+        "admin": "1000/min",
+    },
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+    ],
+    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
+    "DEFAULT_VERSION": "v1",
+    "ALLOWED_VERSIONS": ["v1"],
+    "VERSION_PARAM": "version",
+    "EXCEPTION_HANDLER": "crypto.exception_handler.custom_exception_handler",
+}
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/2",
+    },
+    "throttle": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/3",
+    },
+}
+
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Post API",  # название проекта
+    "VERSION": "0.0.1",  # версия проекта
+    "SERVE_INCLUDE_SCHEMA": False,  # исключить эндпоинт /schema
+    "SWAGGER_UI_SETTINGS": {
+        "filter": True,  # включить поиск по тегам
+    },
+    "COMPONENT_SPLIT_REQUEST": True,
 }
 
 
@@ -179,15 +225,16 @@ USE_TZ = True
 USE_I18N = True
 
 STATIC_URL = "static/"
-
-# STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = BASE_DIR / "staticfiles"
 # STATICFILES_DIRS = []
-
 # MEDIA_URL = 'media/'
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Email
-# https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 
 MAILERS = {
@@ -198,6 +245,10 @@ MAILERS = {
 
 
 # Celery settings
-CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_RESULT_BACKEND = "redis://localhost:6379/1"
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/1"
 CELERY_RESULT_EXPIRES = 60 * 60 * 24
+
+CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {
+    "retry_policy": {"max_retries": 1, "interval_start": 0, "interval_step": 0.2, "interval_max": 0.2},
+}
