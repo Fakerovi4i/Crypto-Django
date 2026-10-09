@@ -8,7 +8,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY --chown=user_django:group_django . .
 
-RUN mkdir -p /app/staticfiles && chown -R user_django:group_django /app
+# Создаем заранее папку для статики с правами не root
+RUN mkdir -p /app/config/staticfiles && chown -R user_django:group_django /app
 USER user_django:group_django
 
 WORKDIR /app/config
