@@ -1,4 +1,4 @@
-.PHONY: up down restart logs build ruff ruff-fix ruff-format mypy test migrate shell static ps errors bash stop superuser start
+.PHONY: up down restart logs build ruff ruff-fix ruff-format mypy test migrate shell static ps errors bash stop superuser start whoami
 
 # Запуск контейнера и тесты
 up:
@@ -37,6 +37,9 @@ errors:
 bash:
 	docker compose exec crypto_app bash
 
+whoami:
+	docker compose exec crypto_app whoami
+
 
 # Вспомогательное
 ruff-check:
@@ -59,4 +62,3 @@ shell:
 
 static:
 	docker compose exec crypto_app python manage.py collectstatic --noinput
-
