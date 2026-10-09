@@ -157,11 +157,11 @@ REST_FRAMEWORK = {
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/2",
+        "LOCATION": os.getenv("DEFAULT_CACHE", "redis://127.0.0.1:6379/2"),
     },
     "throttle": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/3",
+        "LOCATION": os.getenv("THROTTLING_CACHE", "redis://127.0.0.1:6379/3"),
     },
 }
 
@@ -245,8 +245,8 @@ MAILERS = {
 
 
 # Celery settings
-CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
-CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/1"
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://127.0.0.1:6379/1")
 CELERY_RESULT_EXPIRES = 60 * 60 * 24
 
 CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {
