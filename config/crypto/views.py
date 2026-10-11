@@ -1,8 +1,12 @@
+# TODO: сделать кэш 60 * 60
+
 from typing import Any, cast
 
 from celery.result import AsyncResult
 from django.contrib.auth.models import User
 from django.db.models import Sum
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers, status, views, viewsets
@@ -48,6 +52,7 @@ from crypto.tasks import fetch_snapshot_task
     ),
     retrieve=extend_schema(summary="Получить детализацию снимка", responses=SnapshotDetailSerializer),
 )
+@method_decorator(cache_page(60), name="retrieve")
 class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
     """Представление для Snapshot с вариантом списка и детализации"""
 
