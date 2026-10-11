@@ -2,8 +2,7 @@ import functools
 
 import redis
 from django.conf import settings
-from rest_framework import status
-from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
 
 
 def handle_not_found(method):
@@ -13,7 +12,7 @@ def handle_not_found(method):
         try:
             return method(self, request, *args, **kwargs)
         except ValueError as e:
-            return Response(data={"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
+            raise NotFound(str(e)) from e
 
     return warpper
 

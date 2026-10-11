@@ -6,23 +6,32 @@ from rest_framework.test import APITestCase
 
 class TestFetchSnapshotApi(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="12345")
+        self.user = User.objects.create_user(username="testuser", password="12345", is_staff=True)
+        self.non_admin_user = User.objects.create_user(username="testuser2", password="12345")
 
     @patch("crypto.views.fetch_snapshot_task")
-    def test_start_task_return_202(self, mock_task):
+    def test_fetch_start_task_return_202_admin_permission_worked(self, mock_task):
         """Проверяем, что эндпоинт /api/fetch-snapshot/ возвращает 202 и id задачи"""
         self.client.force_authenticate(user=self.user)
         mock_task.delay.return_value = MagicMock(id="abc-123")
 
-        response = self.client.post("/api/fetch-snapshot/")
+        response = self.client.post("/api/v1/fetch-snapshot/")
 
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.data, {"task_id": "abc-123"})
 
-    def test_start_not_auth_401(self):
-        """Проверяем, что эндпоинт /api/fetch-snapshot/ возвращает 401, если не отправлены учетные данные"""
+    def test_fetch_start_not_auth_401(self):
+        """Проверяем, что эндпоинт /api/fetch-snapshot/ возвращает 403, если не отправлены учетные данные"""
+        self.client.force_authenticate(user=self.non_admin_user)
 
-        response = self.client.post("/api/fetch-snapshot/")
+        response = self.client.post("/api/v1/fetch-snapshot/")
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_fetch_snapshot_not_admin_403(self):
+        """Проверяем, что эндпоинт /api/fetch-snapshot/ возвращает 403 для не админа"""
+
+        response = self.client.post("/api/v1/fetch-snapshot/")
 
         self.assertEqual(response.status_code, 401)
 
@@ -33,7 +42,7 @@ class TestFetchSnapshotApi(APITestCase):
 
         mock_async_result.return_value = MagicMock(id="abc-123", status="SUCCESS", result={"snapshot_id": 7})
 
-        response = self.client.get("/api/fetch-snapshot-status/abc-123/")
+        response = self.client.get("/api/v1/fetch-snapshot-status/abc-123/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["task_id"], "abc-123")
@@ -49,7 +58,7 @@ class TestFetchSnapshotApi(APITestCase):
         self.client.force_authenticate(user=self.user)
         mock_async_result.return_value = MagicMock(id="nonexistent-id", status="PENDING", result=None)
 
-        response = self.client.get("/api/fetch-snapshot-status/nonexistent-id/")
+        response = self.client.get("/api/v1/fetch-snapshot-status/nonexistent-id/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["status"], "PENDING")

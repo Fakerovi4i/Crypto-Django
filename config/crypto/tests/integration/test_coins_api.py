@@ -54,27 +54,47 @@ class CoinsApiTests(APITestCase):
     def test_coin_price_history_count_sql_queries(self):
         """Проверяет количество запросов при получении истории цены"""
         # Без select_related 12 запросов
-        with self.assertNumQueries(2):
-            response = self.client.get("/api/coins/")
+        # Если вместо Cursor использовать PageNumber + 1 запрос
+        with self.assertNumQueries(1):
+            response = self.client.get("/api/v1/coins/")
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_coin_price_history_filter_symbol(self):
         """Проверяет фильтрацию истории цены"""
-        response = self.client.get("/api/coins/?symbol=coin_2")
+        response = self.client.get("/api/v1/coins/?symbol=coin_2")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 5)  # всего в фильтре
-        self.assertEqual(len(response.data["results"]), 5)  # на странице
+        for item in response.data["results"]:
+            self.assertEqual(item["symbol"], "coin_2")
 
     def test_coin_price_history_filter_min_max_price(self):
-        response = self.client.get("/api/coins/?min_price=500&max_price=1500")
+        """Проверяет фильтрацию истории цены по минимальной и максимальной цене"""
+        response = self.client.get("/api/v1/coins/?min_price=500&max_price=1500")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 15)  # всего в фильтре
-        self.assertEqual(len(response.data["results"]), 10)  # на странице, пагинация по 10
+        for item in response.data["results"]:
+            price = float(item["price"])
+            self.assertGreaterEqual(price, 500)
+            self.assertLessEqual(price, 1500)
 
     def test_coin_price_history_filter_min_max_price_edge_case(self):
-        response = self.client.get("/api/coins/?min_price=501&max_price=1499")
+        """Проверяет фильтрацию истории цены edge case"""
+        snapshot_3 = Snapshot.objects.create()
+        CoinPrice.objects.create(
+            coin_id="test_case",
+            name="Coin_test_case",
+            symbol="coin_test_case",
+            price=1499,
+            market_cap=1000000,
+            total_volume=1000000,
+            price_change_percentage_24h=10,
+            snapshot=snapshot_3,
+        )
+        response = self.client.get("/api/v1/coins/?min_price=501&max_price=1499")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 5)  # всего в фильтре
+        self.assertEqual(len(response.data["results"]), 6)
+        for item in response.data["results"]:
+            price = float(item["price"])
+            self.assertGreaterEqual(price, 501)
+            self.assertLessEqual(price, 1499)

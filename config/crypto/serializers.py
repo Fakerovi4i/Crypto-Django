@@ -1,24 +1,6 @@
-from decimal import Decimal
-from typing import Any
-
 from rest_framework import serializers
 
 from crypto.models import CoinPrice, Snapshot, WatchlistItem
-
-
-class CoinPriceFilterSerializer(serializers.Serializer):
-    """Сериализатор-валидатор для CoinPriceHistory"""
-
-    symbol = serializers.CharField(required=False, allow_blank=False)
-    min_price = serializers.DecimalField(max_digits=20, decimal_places=8, required=False, min_value=0)
-    max_price = serializers.DecimalField(max_digits=20, decimal_places=8, required=False, min_value=0)
-
-    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
-        min_price: Decimal | None = attrs.get("min_price")
-        max_price: Decimal | None = attrs.get("max_price")
-        if min_price is not None and max_price is not None and min_price > max_price:
-            raise serializers.ValidationError("min_price не может быть больше max_price")
-        return attrs
 
 
 class CoinPriceSerializer(serializers.ModelSerializer):
@@ -32,19 +14,22 @@ class CoinPriceSerializer(serializers.ModelSerializer):
 class SnapshotListSerializer(serializers.ModelSerializer):
     """Сериализатор для Snapshot api/snapshots"""
 
+    total_market_cap = serializers.DecimalField(max_digits=30, decimal_places=2, read_only=True, allow_null=True)
+
     class Meta:
         model = Snapshot
-        fields = ["id", "created_at", "source"]
+        fields = ["id", "created_at", "source", "total_market_cap"]
 
 
 class SnapshotDetailSerializer(serializers.ModelSerializer):
     """Сериализатор для Snapshot c монетами api/snapshots/{id}"""
 
     coin_prices = CoinPriceSerializer(many=True, read_only=True)
+    total_market_cap = serializers.DecimalField(max_digits=30, decimal_places=2, read_only=True, allow_null=True)
 
     class Meta:
         model = Snapshot
-        fields = ["id", "created_at", "source", "coin_prices"]
+        fields = ["id", "created_at", "total_market_cap", "source", "coin_prices"]
 
 
 class CoinPriceHistorySerializer(serializers.ModelSerializer):
