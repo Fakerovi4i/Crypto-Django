@@ -10,11 +10,11 @@ app.autodiscover_tasks()
 
 # ─── Расписание Beat ──────────────────────────
 app.conf.beat_schedule = {
-    "fetch-snapshot-every-10-min": {
+    "fetch-snapshot-every-60-min": {
         "task": "crypto.tasks.fetch_snapshot_task",  # ← имя задачи
-        "schedule": 600.0,  # ← каждые 10 минут (в секундах)
+        "schedule": 60 * 60,  # ← каждый час
         "options": {
-            "expires": 550,  # если не выполнена за ~9 минут — отменить
+            "expires": 600,  # если не выполнена за 10 минут — отменить
         },
     },
     # "cleanup-old-results-daily": {

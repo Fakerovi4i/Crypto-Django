@@ -1,4 +1,3 @@
-# TODO: Изменить тайммаут перед сдачей на 70 минут beat сделать 60 минут
 from decimal import Decimal
 
 from django.conf import settings
@@ -13,7 +12,7 @@ from crypto.providers.base import BaseProvider
 from crypto.providers.entities import Coin
 from crypto.providers.provider_factory import get_provider
 
-CACHE_TTL = 240
+CACHE_TTL = 70 * 60
 TOP_MOVERS = "top_movers"
 MARKET_STATS = "market_stats"
 VOLUME_LEADERS = "volume_leaders"

@@ -1,5 +1,3 @@
-# TODO: сделать кэш 60 * 60
-
 from typing import Any, cast
 
 from celery.result import AsyncResult
@@ -52,7 +50,7 @@ from crypto.tasks import fetch_snapshot_task
     ),
     retrieve=extend_schema(summary="Получить детализацию снимка", responses=SnapshotDetailSerializer),
 )
-@method_decorator(cache_page(60), name="retrieve")
+@method_decorator(cache_page(60 * 60), name="retrieve")
 class SnapshotViewSet(viewsets.ReadOnlyModelViewSet):
     """Представление для Snapshot с вариантом списка и детализации"""
 
