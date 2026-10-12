@@ -20,11 +20,13 @@ class TestFetchSnapshotTask(SimpleTestCase):
         # мокаем получение рэдис
         self.redis_client.set.return_value = True
 
-    def test_fetch_snapshot_task_success(self):
+    @patch("crypto.tasks.analytics_cache")
+    def test_fetch_snapshot_task_success(self, analytics_cache_mock):
         """Проверяем успешное выполнение задачи"""
         self.fetch_and_save_snapshot.return_value = MagicMock(pk=7)
         result = fetch_snapshot_task.apply()
         self.assertEqual(result.get(), {"snapshot_id": 7})
+        analytics_cache_mock.assert_called_once()
 
     def test_retries_temporary_error(self):
         """Проверяем, что задача выполняется с 3-мя ретраями и вызовом TemporaryProviderError"""
