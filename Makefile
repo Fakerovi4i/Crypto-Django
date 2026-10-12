@@ -1,11 +1,11 @@
-.PHONY: up down restart logs build ruff ruff-fix ruff-format mypy test migrate shell static ps errors bash stop superuser start whoami
+.PHONY: up down logs build test migrate shell static ps errors bash stop superuser start whoami redis_keys redis_ttl django_shell
 
 # Запуск контейнера и тесты
 up:
 	docker compose up -d
 
 test:
-	docker compose exec crypto_app python manage.py test -v 2 --failfast
+	docker compose exec crypto_app python manage.py test -v 2 --failfast --settings=config.settings_test
 
 # Создать при первом запуске
 superuser:
@@ -41,19 +41,6 @@ whoami:
 	docker compose exec crypto_app whoami
 
 
-# Вспомогательное
-ruff-check:
-	docker compose exec crypto_app ruff check
-
-ruff-fix:
-	docker compose exec crypto_app ruff --fix
-
-ruff-format:
-	docker compose exec crypto_app ruff format .
-
-mypy:
-	docker compose exec crypto_app mypy --no-incremental .
-
 migrate:
 	docker compose exec crypto_app python manage.py migrate
 
@@ -62,3 +49,12 @@ shell:
 
 static:
 	docker compose exec crypto_app python manage.py collectstatic --noinput
+
+redis_keys:
+	docker compose exec redis redis-cli -n 2 keys '*'
+
+redis_ttl:
+	docker compose exec redis redis-cli -n 2 ttl ':1:$(KEY)'
+
+django_shell:
+	docker compose exec crypto_app python manage.py shell_plus --print-sql
