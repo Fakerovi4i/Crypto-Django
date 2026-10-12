@@ -136,6 +136,7 @@ def fetch_and_save_snapshot() -> Snapshot:
 
 def analytics_cache() -> None:
     """Кэширует данные для аналитики"""
+    cache.delete_many([MARKET_STATS, TOP_MOVERS, VOLUME_LEADERS])
     cache.set_many(
         {
             TOP_MOVERS: list(analytics_top_movers()),
