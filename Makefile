@@ -4,6 +4,10 @@
 up:
 	docker compose up -d
 
+# Создать при первом запуске
+superuser:
+	docker compose exec crypto_app python manage.py createsuperuser
+
 test:
 	docker compose exec crypto_app python manage.py test -v 2 --failfast
 
@@ -16,9 +20,6 @@ ruff-check:
 ruff-format:
 	docker compose exec crypto_app ruff format .
 
-# Создать при первом запуске
-superuser:
-	docker compose exec crypto_app python manage.py createsuperuser
 
 # Docker
 down:
