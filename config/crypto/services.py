@@ -58,22 +58,36 @@ def _get_latest_snapshot_helper() -> Snapshot:
     return latest_snapshot
 
 
-def analytics_market_stats() -> dict[str, Decimal]:
-    """Возвращает статистику по рынку c кэшированием"""
-    cached = cache.get(MARKET_STATS)
-    if cached is not None:
-        return cached
-
+def _compute_market_stats() -> dict[str, Decimal]:
     snapshot = _get_latest_snapshot_helper()
+
     stats = CoinPrice.objects.filter(snapshot=snapshot).aggregate(
         min_price=Min("price"), max_price=Max("price"), avg_price=Avg("price"), total_market_cap=Sum("market_cap")
     )
 
     if stats["min_price"] is None:
         raise ValueError("No market data found")
-
-    cache.set(MARKET_STATS, stats, timeout=CACHE_TTL)
     return stats
+
+
+def analytics_market_stats() -> dict[str, Decimal]:
+    """Возвращает статистику по рынку c кэшированием"""
+    cached = cache.get(MARKET_STATS)
+    if cached is not None:
+        return cached
+    data = _compute_market_stats()
+    cache.set(MARKET_STATS, data, timeout=CACHE_TTL)
+    return data
+
+
+def _compute_top_movers() -> list[CoinPrice]:
+    snapshot = _get_latest_snapshot_helper()
+    coin_prices: list[CoinPrice] = list(
+        CoinPrice.objects.filter(snapshot=snapshot)
+        .annotate(volatility=Abs("price_change_percentage_24h"))
+        .order_by("-volatility")[:10]
+    )
+    return coin_prices
 
 
 def analytics_top_movers() -> list[CoinPrice]:
@@ -81,16 +95,14 @@ def analytics_top_movers() -> list[CoinPrice]:
     cached = cache.get(TOP_MOVERS)
     if cached is not None:
         return cached
+    data = _compute_top_movers()
+    cache.set(TOP_MOVERS, data, timeout=CACHE_TTL)
+    return data
 
+
+def _compute_volume_leaders() -> list[CoinPrice]:
     snapshot = _get_latest_snapshot_helper()
-
-    coin_prices: list[CoinPrice] = list(
-        CoinPrice.objects.filter(snapshot=snapshot)
-        .annotate(volatility=Abs("price_change_percentage_24h"))
-        .order_by("-volatility")[:10]
-    )
-
-    cache.set(TOP_MOVERS, coin_prices, timeout=CACHE_TTL)
+    coin_prices = list(CoinPrice.objects.filter(snapshot=snapshot).order_by("-total_volume")[:10])
     return coin_prices
 
 
@@ -99,12 +111,9 @@ def analytics_volume_leaders() -> list[CoinPrice]:
     cached = cache.get(VOLUME_LEADERS)
     if cached is not None:
         return cached
-
-    snapshot = _get_latest_snapshot_helper()
-    coin_prices = list(CoinPrice.objects.filter(snapshot=snapshot).order_by("-total_volume")[:10])
-
-    cache.set(VOLUME_LEADERS, coin_prices, timeout=CACHE_TTL)
-    return coin_prices
+    data = _compute_volume_leaders()
+    cache.set(VOLUME_LEADERS, data, timeout=CACHE_TTL)
+    return data
 
 
 def fetch_and_save_snapshot() -> Snapshot:
@@ -136,12 +145,11 @@ def fetch_and_save_snapshot() -> Snapshot:
 
 def analytics_cache() -> None:
     """Кэширует данные для аналитики"""
-    cache.delete_many([MARKET_STATS, TOP_MOVERS, VOLUME_LEADERS])
     cache.set_many(
         {
-            TOP_MOVERS: list(analytics_top_movers()),
-            MARKET_STATS: analytics_market_stats(),
-            VOLUME_LEADERS: analytics_volume_leaders(),
+            TOP_MOVERS: _compute_top_movers(),
+            MARKET_STATS: _compute_market_stats(),
+            VOLUME_LEADERS: _compute_volume_leaders(),
         },
         timeout=CACHE_TTL,
     )

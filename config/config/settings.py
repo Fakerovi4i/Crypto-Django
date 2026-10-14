@@ -28,7 +28,7 @@ DEBUG = False
 
 ALLOWED_HOSTS = ["*"]
 
-INTERNAL_IPS = ["127.0.0.1"]
+INTERNAL_IPS = ["127.0.0.1", "172.18.0.1"]
 
 
 def show_toolbar(request):
@@ -156,12 +156,24 @@ REST_FRAMEWORK = {
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": os.getenv("DEFAULT_CACHE", "redis://127.0.0.1:6379/2"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "IGNORE_EXCEPTIONS": True,
+            "SOCKET_CONNECT_TIMEOUT": 0.5,
+            "SOCKET_TIMEOUT": 0.5,
+        },
     },
     "throttle": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": os.getenv("THROTTLING_CACHE", "redis://127.0.0.1:6379/3"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "IGNORE_EXCEPTIONS": True,
+            "SOCKET_CONNECT_TIMEOUT": 0.5,
+            "SOCKET_TIMEOUT": 0.5,
+        },
     },
 }
 
