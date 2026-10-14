@@ -1,4 +1,4 @@
-.PHONY: up down logs build test shell static ps errors bash stop superuser start whoami
+.PHONY: up down logs build test shell static ps errors bash stop superuser start whoami ruff-fix ruff-check ruff-format
 
 # Запуск контейнера и тесты
 up:
@@ -6,6 +6,15 @@ up:
 
 test:
 	docker compose exec crypto_app python manage.py test -v 2 --failfast
+
+ruff-fix:
+	docker compose exec crypto_app ruff check . --fix
+
+ruff-check:
+	docker compose exec crypto_app ruff check .
+
+ruff-format:
+	docker compose exec crypto_app ruff format .
 
 # Создать при первом запуске
 superuser:
