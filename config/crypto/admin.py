@@ -6,7 +6,7 @@ from .models import Balance, CoinPrice, Portfolio, Snapshot, WatchlistItem
 class CoinPriceInline(admin.TabularInline):
     model = CoinPrice
     extra = 0
-    fields = ("coin_id", "name", "price", "price_change_percentage_24h")
+    fields = ("symbol", "name", "price", "price_change_percentage_24h")
 
 
 @admin.register(Snapshot)
@@ -19,7 +19,7 @@ class SnapshotAdmin(admin.ModelAdmin):
 
 @admin.register(CoinPrice)
 class CoinPriceAdmin(admin.ModelAdmin):
-    list_display = ("coin_id", "name", "price", "snapshot")
+    list_display = ("symbol", "name", "price", "snapshot")
     ordering = ("price_change_percentage_24h",)
 
 

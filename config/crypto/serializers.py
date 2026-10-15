@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from crypto.models import CoinPrice, Snapshot, WatchlistItem
+from crypto.models import CoinPrice, Portfolio, Snapshot, WatchlistItem
 
 
 class CoinPriceSerializer(serializers.ModelSerializer):
@@ -59,3 +59,18 @@ class AnalyticsMarketStatsSerializer(serializers.Serializer):
     max_price = serializers.DecimalField(max_digits=20, decimal_places=8)
     avg_price = serializers.DecimalField(max_digits=20, decimal_places=8)
     total_market_cap = serializers.DecimalField(max_digits=30, decimal_places=2)
+
+
+class PortfolioBuySerializer(serializers.Serializer):
+    """Сериализатор для Portfolio api/portfolio/buy"""
+
+    symbol = serializers.CharField(max_length=50)
+    amount = serializers.DecimalField(max_digits=20, decimal_places=8)
+
+
+class PortfolioSerializer(serializers.ModelSerializer):
+    """Сериализатор для Portfolio api/portfolio"""
+
+    class Meta:
+        model = Portfolio
+        fields = ["id", "user", "symbol", "amount", "buy_price", "bought_at"]

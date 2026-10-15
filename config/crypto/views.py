@@ -8,6 +8,7 @@ from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers, status, views, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import CursorPagination
@@ -24,11 +25,14 @@ from crypto.serializers import (
     AnalyticsMarketStatsSerializer,
     CoinPriceHistorySerializer,
     CoinPriceSerializer,
+    PortfolioBuySerializer,
+    PortfolioSerializer,
     SnapshotDetailSerializer,
     SnapshotListSerializer,
     WatchlistItemSerializer,
 )
 from crypto.services import (
+    PortfolioService,
     analytics_market_stats,
     analytics_top_movers,
     analytics_volume_leaders,
@@ -198,3 +202,27 @@ class FetchSnapshotStatusApi(views.APIView):
     def get(self, request: Request, task_id: str, *args, **kwargs) -> Response:
         result: AsyncResult[Any] = AsyncResult(task_id)
         return Response({"task_id": result.id, "status": result.status, "result": str(result.result)})
+
+
+class PortfolioViewSet(viewsets.ViewSet):
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        request=PortfolioBuySerializer,
+        responses={201: PortfolioSerializer},
+    )
+    @action(detail=False, methods=["post"])
+    def buy(self, request, *args, **kwargs):
+        serializer = PortfolioBuySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            position = PortfolioService().buy(
+                user=request.user,
+                symbol=serializer.validated_data["symbol"],
+                amount=serializer.validated_data["amount"],
+            )
+        except ValueError as e:
+            raise ValidationError(str(e)) from e
+
+        return Response(PortfolioSerializer(position).data, status=status.HTTP_201_CREATED)
