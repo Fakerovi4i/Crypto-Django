@@ -7,7 +7,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Avg, Max, Min, QuerySet, Sum
 from django.db.models.functions import Abs
 
-from crypto.models import CoinPrice, Snapshot, WatchlistItem
+from crypto.models import Balance, CoinPrice, Portfolio, Snapshot, WatchlistItem
 from crypto.providers.base import BaseProvider
 from crypto.providers.entities import Coin
 from crypto.providers.provider_factory import get_provider
@@ -153,3 +153,35 @@ def analytics_cache() -> None:
         },
         timeout=CACHE_TTL,
     )
+
+
+class PortfolioService:
+    @transaction.atomic
+    def buy(self, user: User, symbol: str, amount: Decimal) -> Portfolio:
+        symbol = symbol.lower()
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+
+        coin: CoinPrice | None = CoinPrice.objects.filter(symbol=symbol).order_by("-id").first()
+        if coin is None:
+            raise ValueError("Coin not found")
+        total_price = (coin.price * amount).quantize(Decimal("0.00000001"))
+
+        balance: Balance = Balance.objects.select_for_update().get(user=user)
+        if total_price > balance.amount:
+            raise ValueError("Not enough balance")
+        balance.amount -= total_price
+        balance.save(update_fields=["amount"])
+
+        portfolio: Portfolio | None = Portfolio.objects.filter(user=user, symbol=symbol).first()
+        if portfolio is None:
+            return Portfolio.objects.create(user=user, symbol=symbol, amount=amount, buy_price=coin.price)
+
+        new_amount = portfolio.amount + amount
+        portfolio.buy_price = (portfolio.amount * portfolio.buy_price + total_price) / new_amount
+        portfolio.amount = new_amount
+        portfolio.save(update_fields=["amount", "buy_price"])
+        return portfolio
+
+    def sell(self) -> None:
+        pass
