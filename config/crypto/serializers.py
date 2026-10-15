@@ -62,15 +62,15 @@ class AnalyticsMarketStatsSerializer(serializers.Serializer):
 
 
 class PortfolioBuySerializer(serializers.Serializer):
-    """Сериализатор для Portfolio api/portfolio/buy"""
+    """Входной сериализатор для Portfolio"""
 
     symbol = serializers.CharField(max_length=50)
     amount = serializers.DecimalField(max_digits=20, decimal_places=8)
 
 
 class PortfolioSerializer(serializers.ModelSerializer):
-    """Сериализатор для Portfolio api/portfolio"""
+    """Output сериализатор для Portfolio api/portfolio/"""
 
     class Meta:
         model = Portfolio
-        fields = ["id", "user", "symbol", "amount", "buy_price", "bought_at"]
+        fields = ["symbol", "amount", "buy_price", "bought_at"]

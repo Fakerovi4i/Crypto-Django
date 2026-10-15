@@ -162,7 +162,8 @@ class PortfolioService:
         if amount <= 0:
             raise ValueError("Amount must be positive")
 
-        coin: CoinPrice | None = CoinPrice.objects.filter(symbol=symbol).order_by("-id").first()
+        last_snapshot = _get_latest_snapshot_helper()
+        coin: CoinPrice | None = CoinPrice.objects.filter(snapshot=last_snapshot, symbol=symbol).order_by("-id").first()
         if coin is None:
             raise ValueError("Coin not found")
         total_price = (coin.price * amount).quantize(Decimal("0.00000001"))
