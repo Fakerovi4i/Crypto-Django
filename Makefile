@@ -1,4 +1,4 @@
-.PHONY: up down logs build test shell static ps errors bash stop superuser start whoami ruff-fix ruff-check ruff-format
+.PHONY: up down logs build test shell static ps errors bash stop superuser start whoami ruff-fix ruff-check ruff-format migrate tables logs_app
 
 # Запуск контейнера и тесты
 up:
@@ -7,6 +7,9 @@ up:
 # Создать при первом запуске
 superuser:
 	docker compose exec crypto_app python manage.py createsuperuser
+
+migrate:
+	docker compose exec crypto_app python manage.py migrate crypto
 
 test:
 	docker compose exec crypto_app python manage.py test -v 2 --failfast
@@ -37,6 +40,9 @@ build:
 logs:
 	docker compose logs -f
 
+logs_app:
+	docker compose logs crypto_app --tail=100 -f
+
 ps:
 	docker compose ps
 
@@ -52,7 +58,10 @@ whoami:
 
 # Вспомогательное
 shell:
-	docker compose exec crypto_app python manage.py shell
+	docker compose exec crypto_app python manage.py shell_plus
 
 static:
 	docker compose exec crypto_app python manage.py collectstatic --noinput
+
+tables:
+	docker compose exec postgres sh -c 'psql -U $$POSTGRES_USER -d $$POSTGRES_DB -c "\dt"'
