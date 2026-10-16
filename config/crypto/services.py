@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.db.models import Avg, Max, Min, QuerySet, Sum
+from django.db.models import Avg, Max, Min, OuterRef, QuerySet, Subquery, Sum
 from django.db.models.functions import Abs
 
 from crypto.models import Balance, CoinPrice, Portfolio, Snapshot, WatchlistItem
@@ -174,15 +174,52 @@ class PortfolioService:
         balance.amount -= total_price
         balance.save(update_fields=["amount"])
 
-        portfolio: Portfolio | None = Portfolio.objects.filter(user=user, symbol=symbol).first()
-        if portfolio is None:
+        position: Portfolio | None = Portfolio.objects.filter(user=user, symbol=symbol).first()
+        if position is None:
             return Portfolio.objects.create(user=user, symbol=symbol, amount=amount, buy_price=coin.price)
 
-        new_amount = portfolio.amount + amount
-        portfolio.buy_price = (portfolio.amount * portfolio.buy_price + total_price) / new_amount
-        portfolio.amount = new_amount
-        portfolio.save(update_fields=["amount", "buy_price"])
-        return portfolio
+        new_amount = position.amount + amount
+        position.buy_price = (position.amount * position.buy_price + total_price) / new_amount
+        position.amount = new_amount
+        position.save(update_fields=["amount", "buy_price"])
+        return position
 
-    def sell(self) -> None:
-        pass
+    @transaction.atomic
+    def sell(self, user: User, symbol: str, amount: Decimal) -> Balance:
+        symbol = symbol.lower()
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+
+        balance: Balance = Balance.objects.select_for_update().get(user=user)
+        position: Portfolio | None = Portfolio.objects.filter(user=user, symbol=symbol).first()
+        if position is None:
+            raise ValueError("Position not found in portfolio")
+        if amount > position.amount:
+            raise ValueError("Not enough amount in portfolio")
+
+        # Аварийная проверка на удаление снимка из админки
+        coin: CoinPrice | None = CoinPrice.objects.filter(symbol=symbol).order_by("-id").first()
+        if coin is None:
+            raise ValueError("Coin not found in database")
+
+        position.amount -= amount
+        if position.amount == 0:
+            position.delete()
+        else:
+            position.save(update_fields=["amount"])
+
+        total_sell_price = (coin.price * amount).quantize(Decimal("0.00000001"))
+        balance.amount += total_sell_price
+
+        balance.save(update_fields=["amount"])
+        return balance
+
+    def list_positions(self, user: User) -> QuerySet[Portfolio]:
+        snapshot = _get_latest_snapshot_helper()
+        price_sub = (
+            CoinPrice.objects.filter(snapshot=snapshot, symbol=OuterRef("symbol")).values("price").order_by("-id")[:1]
+        )
+
+        portfolio_with_curr_price = Portfolio.objects.filter(user=user).annotate(current_price=Subquery(price_sub))
+
+        return portfolio_with_curr_price
