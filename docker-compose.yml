@@ -1,0 +1,112 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    restart: always
+    networks:
+      - dbnet
+    ports:
+      - "80:80"
+    volumes:
+      - staticfiles:/app/config/staticfiles
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - crypto_app
+
+  crypto_app:
+    build: .
+    image: crypto_app
+    pull_policy: build
+    container_name: crypto_app
+    restart: always
+    command: >
+      sh -c "python manage.py migrate &&
+      python manage.py collectstatic --noinput &&
+      gunicorn config.wsgi:application
+      --bind 0.0.0.0:8000 --workers 3 --no-control-socket
+      --access-logfile - --error-logfile -"
+    env_file:
+      - .env
+    networks:
+      - dbnet
+    volumes:
+      - staticfiles:/app/config/staticfiles
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:18-bookworm
+    container_name: postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - dbnet
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    networks:
+      - dbnet
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  celery:
+    image: crypto_app
+    pull_policy: build
+    container_name: celery
+    command: celery -A config worker -l info --concurrency=3
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - dbnet
+
+
+  celery-beat:
+    image: crypto_app
+    pull_policy: build
+    container_name: celery-beat
+    command: celery -A config beat -l info
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - dbnet
+
+
+
+networks:
+  dbnet:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  staticfiles:

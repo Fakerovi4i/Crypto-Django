@@ -1,6 +1,6 @@
 # Crypto Analyzer API
 
-### Установка
+### Установка локально
 
 ```bash
 pip install -r requirements.txt
@@ -10,27 +10,63 @@ python3 manage.py createsuperuser
 ```
 ### Необходимая инфраструктура:
 
-```
-- Python >= 3.14,
+- Python ≥ 3.14
 - PostgreSQL
 - Redis
+- Docker + Docker Compose (для запуска в контейнерах)
+
+
+### Запуск через Docker (рекомендуется)
+
+```bash
+make build up     # собрать образы и поднять контейнеры
+make superuser  # создать админа (опционально)
 ```
 
-### Запуск
+### Локальный запуск (без Docker)
 
-```
-gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 \
-  --access-logfile - --error-logfile -
+```bash
+pip install -r requirements.txt
+source venv/bin/activate
+
+cd config
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py runserver
 ```
 
-###Celery
+##### Для прода
+```bash
+gunicorn config.wsgi:application \
+  --bind 0.0.0.0:8000 \
+  --workers 3 \
+  --access-logfile - \
+  --error-logfile - \
+  --no-control-socket
 ```
+
+
+### Celery
+###### (В Docker — поднимается автоматически)
+
+```bash     
+# worker
 celery -A config worker -l info
+
+# планировщик (в отдельном терминале)
+celery -A config beat -l info
 ```
 
 ## Полезные ссылки
-### API: [localhost:8000/api/v1/](localhost:8000/api/v1/)
+###### _При запуске **через Docker** (nginx на порту 80):_
 
-### Swagger: [localhost:8000/api/v1/docs/](localhost:8000/api/v1/docs/)
+- API: http://localhost/api/v1/
+- Swagger: http://localhost/api/v1/docs/
+- JWT: http://localhost/api/token/
+- Админка: http://localhost/admin/
 
-### JWT: [localhost:8000/api/token/](localhost:8000/api/token/)
+###### _При **локальном запуске** (gunicorn на 8000):_
+
+- API: http://localhost:8000/api/v1/
+- Swagger: http://localhost:8000/api/v1/docs/
+- JWT: http://localhost:8000/api/token/

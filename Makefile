@@ -1,0 +1,58 @@
+.PHONY: up down logs build test shell static ps errors bash stop superuser start whoami ruff-fix ruff-check ruff-format
+
+# Запуск контейнера и тесты
+up:
+	docker compose up -d
+
+# Создать при первом запуске
+superuser:
+	docker compose exec crypto_app python manage.py createsuperuser
+
+test:
+	docker compose exec crypto_app python manage.py test -v 2 --failfast
+
+ruff-fix:
+	docker compose exec crypto_app ruff check . --fix
+
+ruff-check:
+	docker compose exec crypto_app ruff check .
+
+ruff-format:
+	docker compose exec crypto_app ruff format .
+
+
+# Docker
+down:
+	docker compose down
+
+stop:
+	docker compose stop
+
+start:
+	docker compose up -d
+
+build:
+	docker compose up -d --build
+
+logs:
+	docker compose logs -f
+
+ps:
+	docker compose ps
+
+errors:
+	docker compose logs crypto_app | grep -i error || true
+
+bash:
+	docker compose exec crypto_app bash
+
+whoami:
+	docker compose exec crypto_app whoami
+
+
+# Вспомогательное
+shell:
+	docker compose exec crypto_app python manage.py shell
+
+static:
+	docker compose exec crypto_app python manage.py collectstatic --noinput
