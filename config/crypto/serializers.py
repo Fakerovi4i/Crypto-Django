@@ -61,7 +61,7 @@ class AnalyticsMarketStatsSerializer(serializers.Serializer):
     total_market_cap = serializers.DecimalField(max_digits=30, decimal_places=2)
 
 
-class PortfolioBuySerializer(serializers.Serializer):
+class PortfolioInSerializer(serializers.Serializer):
     """Входной сериализатор для Portfolio"""
 
     symbol = serializers.CharField(max_length=50)
@@ -74,3 +74,19 @@ class PortfolioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Portfolio
         fields = ["symbol", "amount", "buy_price", "bought_at"]
+
+
+class BalanceSerializer(serializers.Serializer):
+    """Output сериализватор для Balance api/portfolio/sell/"""
+
+    amount = serializers.DecimalField(max_digits=20, decimal_places=8)
+
+
+class PortfolioPositionsSerializer(serializers.ModelSerializer):
+    """Output сериализватор для Portfolio api/portfolio/"""
+
+    current_price = serializers.DecimalField(max_digits=20, decimal_places=8, allow_null=True)
+
+    class Meta:
+        model = Portfolio
+        fields = ["symbol", "amount", "bought_at", "buy_price", "current_price"]

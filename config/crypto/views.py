@@ -23,9 +23,11 @@ from crypto.models import CoinPrice, Snapshot, WatchlistItem
 from crypto.permissions import IsAdminOrReadOnly
 from crypto.serializers import (
     AnalyticsMarketStatsSerializer,
+    BalanceSerializer,
     CoinPriceHistorySerializer,
     CoinPriceSerializer,
-    PortfolioBuySerializer,
+    PortfolioInSerializer,
+    PortfolioPositionsSerializer,
     PortfolioSerializer,
     SnapshotDetailSerializer,
     SnapshotListSerializer,
@@ -204,16 +206,18 @@ class FetchSnapshotStatusApi(views.APIView):
         return Response({"task_id": result.id, "status": result.status, "result": str(result.result)})
 
 
+@extend_schema(tags=["Portfolio"])
 class PortfolioViewSet(viewsets.ViewSet):
     permission_classes = (IsAuthenticated,)
 
     @extend_schema(
-        request=PortfolioBuySerializer,
+        summary="Купить монету",
+        request=PortfolioInSerializer,
         responses={201: PortfolioSerializer},
     )
     @action(detail=False, methods=["post"])
     def buy(self, request, *args, **kwargs):
-        serializer = PortfolioBuySerializer(data=request.data)
+        serializer = PortfolioInSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
@@ -226,3 +230,31 @@ class PortfolioViewSet(viewsets.ViewSet):
             raise ValidationError(str(e)) from e
 
         return Response(PortfolioSerializer(position).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(summary="Продать монету", request=PortfolioInSerializer, responses={200: BalanceSerializer})
+    @action(detail=False, methods=["post"])
+    def sell(self, request, *args, **kwargs):
+        serializer = PortfolioInSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            balance = PortfolioService().sell(
+                user=request.user,
+                symbol=serializer.validated_data["symbol"],
+                amount=serializer.validated_data["amount"],
+            )
+        except ValueError as e:
+            raise ValidationError(str(e)) from e
+
+        return Response(BalanceSerializer(balance).data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Показать список купленных позиций", responses={200: PortfolioPositionsSerializer(many=True)}
+    )
+    def list(self, request, *args, **kwargs):
+        try:
+            positions = PortfolioService().list_positions(user=request.user)
+        except ValueError as e:
+            raise NotFound(str(e)) from e
+
+        serializer = PortfolioPositionsSerializer(positions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
