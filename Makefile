@@ -12,7 +12,7 @@ migrate:
 	docker compose exec crypto_app python manage.py migrate crypto
 
 test:
-	docker compose exec crypto_app python manage.py test -v 2 --failfast
+	docker compose exec crypto_app python manage.py test -v 2 --failfast --settings=config.settings_test
 
 ruff-fix:
 	docker compose exec crypto_app ruff check . --fix
