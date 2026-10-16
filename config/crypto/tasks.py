@@ -2,7 +2,7 @@ from celery import shared_task
 
 from crypto.decorators import single_instance
 from crypto.providers.exceptions import TemporaryProviderError
-from crypto.services import fetch_and_save_snapshot
+from crypto.services import analytics_cache, fetch_and_save_snapshot
 
 
 @shared_task(
@@ -13,4 +13,5 @@ from crypto.services import fetch_and_save_snapshot
 @single_instance("fetch_snapshot_task")
 def fetch_snapshot_task():
     snapshot = fetch_and_save_snapshot()
+    analytics_cache()
     return {"snapshot_id": snapshot.pk}

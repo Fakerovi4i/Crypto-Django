@@ -1,4 +1,4 @@
-from django.core.cache import caches
+from django.core.cache import cache, caches
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -10,6 +10,8 @@ class AnalyticsApiWithDataTests(APITestCase):
 
     def setUp(self):
         caches["throttle"].clear()
+        cache.clear()
+
         snapshot_1 = Snapshot.objects.create()
         snapshot_2 = Snapshot.objects.create()
 
@@ -111,6 +113,7 @@ class AnalyticsApiNoSnapshotsTests(APITestCase):
 
     def setUp(self):
         caches["throttle"].clear()
+        cache.clear()
 
     def test_analytics_market_stats_return_404(self):
         """Проверяет, при пустой базе /api/v1/analytics/market-stats/ - 404"""
@@ -139,6 +142,7 @@ class AnalyticsApiEmptySnapshotTests(APITestCase):
 
     def setUp(self):
         caches["throttle"].clear()
+        cache.clear()
         Snapshot.objects.create()
 
     def test_analyticsmarket_stats_returns_404_no_data(self):
