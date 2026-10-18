@@ -58,7 +58,7 @@ whoami:
 
 # Вспомогательное
 shell:
-	docker compose exec crypto_app python manage.py shell_plus
+	docker compose exec crypto_app python manage.py shell_plus --print-sql
 
 static:
 	docker compose exec crypto_app python manage.py collectstatic --noinput
