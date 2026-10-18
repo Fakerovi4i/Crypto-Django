@@ -29,6 +29,7 @@ from crypto.serializers import (
     PortfolioInSerializer,
     PortfolioPositionsSerializer,
     PortfolioSerializer,
+    PortfolioSummarySerializer,
     SnapshotDetailSerializer,
     SnapshotListSerializer,
     WatchlistItemSerializer,
@@ -221,13 +222,15 @@ class PortfolioViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
 
         try:
-            position = PortfolioService().buy(
+            position, total_price = PortfolioService().buy(
                 user=request.user,
                 symbol=serializer.validated_data["symbol"],
                 amount=serializer.validated_data["amount"],
             )
         except ValueError as e:
             raise ValidationError(str(e)) from e
+
+        position.total_price = total_price
 
         return Response(PortfolioSerializer(position).data, status=status.HTTP_201_CREATED)
 
@@ -258,3 +261,17 @@ class PortfolioViewSet(viewsets.ViewSet):
 
         serializer = PortfolioPositionsSerializer(positions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Стоимость портфеля",
+        responses={200: PortfolioSummarySerializer},
+    )
+    @action(detail=False, methods=["get"])
+    def summary(self, request, *args, **kwargs):
+
+        try:
+            summary = PortfolioService().get_summary(user=request.user)
+        except ValueError as e:
+            raise NotFound(str(e)) from e
+
+        return Response(PortfolioSummarySerializer(summary).data, status=status.HTTP_200_OK)

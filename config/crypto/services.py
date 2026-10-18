@@ -1,10 +1,11 @@
 from decimal import Decimal
+from typing import Any
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.db.models import Avg, Max, Min, OuterRef, QuerySet, Subquery, Sum
+from django.db.models import Avg, F, Max, Min, OuterRef, QuerySet, Subquery, Sum
 from django.db.models.functions import Abs
 
 from crypto.models import Balance, CoinPrice, Portfolio, Snapshot, WatchlistItem
@@ -157,7 +158,7 @@ def analytics_cache() -> None:
 
 class PortfolioService:
     @transaction.atomic
-    def buy(self, user: User, symbol: str, amount: Decimal) -> Portfolio:
+    def buy(self, user: User, symbol: str, amount: Decimal) -> Portfolio | tuple[Portfolio, Decimal]:
         symbol = symbol.lower()
         if amount <= 0:
             raise ValueError("Amount must be positive")
@@ -182,7 +183,7 @@ class PortfolioService:
         position.buy_price = (position.amount * position.buy_price + total_price) / new_amount
         position.amount = new_amount
         position.save(update_fields=["amount", "buy_price"])
-        return position
+        return position, total_price
 
     @transaction.atomic
     def sell(self, user: User, symbol: str, amount: Decimal) -> Balance:
@@ -223,3 +224,26 @@ class PortfolioService:
         portfolio_with_curr_price = Portfolio.objects.filter(user=user).annotate(current_price=Subquery(price_sub))
 
         return portfolio_with_curr_price
+
+    def get_summary(self, user: User) -> dict[str, Any]:
+        snapshot = _get_latest_snapshot_helper()
+        prices_sub = (
+            CoinPrice.objects.filter(snapshot=snapshot, symbol=OuterRef("symbol")).values("price").order_by("-id")[:1]
+        )
+
+        positions = list(
+            Portfolio.objects.filter(user=user)
+            .annotate(current_price=Subquery(prices_sub))
+            .annotate(
+                current_value=F("amount") * F("current_price"),
+                profit=F("amount") * (F("current_price") - F("buy_price")),
+            )
+        )
+
+        analytics = {
+            "total_value": sum((pos.current_value for pos in positions), Decimal("0")),
+            "total_profit": sum((pos.profit for pos in positions), Decimal("0")),
+            "positions": positions,
+        }
+
+        return analytics
