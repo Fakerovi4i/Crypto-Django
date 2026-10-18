@@ -21,7 +21,10 @@ ruff-check:
 	docker compose exec crypto_app ruff check .
 
 ruff-format:
-	docker compose exec crypto_app ruff format .
+	docker compose exec crypto_app ruff format --check .
+
+mypy:
+	docker compose exec crypto_app mypy --no-incremental .
 
 
 # Docker
