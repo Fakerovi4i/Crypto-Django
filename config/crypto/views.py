@@ -222,7 +222,7 @@ class PortfolioViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
 
         try:
-            position, total_price = PortfolioService().buy(
+            position, transaction_price = PortfolioService().buy(
                 user=request.user,
                 symbol=serializer.validated_data["symbol"],
                 amount=serializer.validated_data["amount"],
@@ -230,7 +230,7 @@ class PortfolioViewSet(viewsets.ViewSet):
         except ValueError as e:
             raise ValidationError(str(e)) from e
 
-        position.total_price = total_price
+        position.transaction_price = transaction_price
 
         return Response(PortfolioSerializer(position).data, status=status.HTTP_201_CREATED)
 
