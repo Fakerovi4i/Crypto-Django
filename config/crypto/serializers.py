@@ -71,9 +71,11 @@ class PortfolioInSerializer(serializers.Serializer):
 class PortfolioSerializer(serializers.ModelSerializer):
     """Output сериализатор для Portfolio api/portfolio/"""
 
+    total_price = serializers.DecimalField(max_digits=20, decimal_places=8)
+
     class Meta:
         model = Portfolio
-        fields = ["symbol", "amount", "buy_price", "bought_at"]
+        fields = ["symbol", "amount", "buy_price", "bought_at", "total_price"]
 
 
 class BalanceSerializer(serializers.Serializer):
@@ -85,8 +87,23 @@ class BalanceSerializer(serializers.Serializer):
 class PortfolioPositionsSerializer(serializers.ModelSerializer):
     """Output сериализватор для Portfolio api/portfolio/"""
 
-    current_price = serializers.DecimalField(max_digits=20, decimal_places=8, allow_null=True)
+    current_price = serializers.DecimalField(max_digits=20, decimal_places=8, allow_null=True, read_only=True)
 
     class Meta:
         model = Portfolio
         fields = ["symbol", "amount", "bought_at", "buy_price", "current_price"]
+
+
+class PortfolioSummaryPositionsSerializer(serializers.ModelSerializer):
+    current_value = serializers.DecimalField(max_digits=20, decimal_places=8)
+    profit = serializers.DecimalField(max_digits=20, decimal_places=8)
+
+    class Meta:
+        model = Portfolio
+        fields = ["symbol", "amount", "current_value", "profit"]
+
+
+class PortfolioSummarySerializer(serializers.Serializer):
+    total_value = serializers.DecimalField(max_digits=20, decimal_places=8)
+    total_profit = serializers.DecimalField(max_digits=20, decimal_places=8)
+    positions = PortfolioSummaryPositionsSerializer(many=True, read_only=True)
