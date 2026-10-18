@@ -71,11 +71,11 @@ class PortfolioInSerializer(serializers.Serializer):
 class PortfolioSerializer(serializers.ModelSerializer):
     """Output сериализатор для Portfolio api/portfolio/"""
 
-    total_price = serializers.DecimalField(max_digits=20, decimal_places=8)
+    transaction_price = serializers.DecimalField(max_digits=20, decimal_places=8)
 
     class Meta:
         model = Portfolio
-        fields = ["symbol", "amount", "buy_price", "bought_at", "total_price"]
+        fields = ["symbol", "amount", "buy_price", "bought_at", "transaction_price"]
 
 
 class BalanceSerializer(serializers.Serializer):
