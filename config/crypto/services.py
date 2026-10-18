@@ -177,7 +177,8 @@ class PortfolioService:
 
         position: Portfolio | None = Portfolio.objects.filter(user=user, symbol=symbol).first()
         if position is None:
-            return Portfolio.objects.create(user=user, symbol=symbol, amount=amount, buy_price=coin.price)
+            position = Portfolio.objects.create(user=user, symbol=symbol, amount=amount, buy_price=coin.price)
+            return position, total_price
 
         new_amount = position.amount + amount
         position.buy_price = (position.amount * position.buy_price + total_price) / new_amount
@@ -199,7 +200,8 @@ class PortfolioService:
             raise ValueError("Not enough amount in portfolio")
 
         # Аварийная проверка на удаление снимка из админки
-        coin: CoinPrice | None = CoinPrice.objects.filter(symbol=symbol).order_by("-id").first()
+        last_snapshot = _get_latest_snapshot_helper()
+        coin: CoinPrice | None = CoinPrice.objects.filter(snapshot=last_snapshot, symbol=symbol).order_by("-id").first()
         if coin is None:
             raise ValueError("Coin not found in database")
 
@@ -238,6 +240,7 @@ class PortfolioService:
                 current_value=F("amount") * F("current_price"),
                 profit=F("amount") * (F("current_price") - F("buy_price")),
             )
+            .filter(current_price__isnull=False)
         )
 
         analytics = {
