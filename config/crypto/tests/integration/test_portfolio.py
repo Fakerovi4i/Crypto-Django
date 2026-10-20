@@ -1,5 +1,6 @@
 import threading
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.db import connection
@@ -51,6 +52,20 @@ class PortfolioServiceTests(TestCase):
 
         self.assertEqual(balance.amount, Decimal("1000"))
         self.assertFalse(Portfolio.objects.filter(user=self.user_1).exists())
+
+    @patch("crypto.services.Portfolio.objects.create")
+    def test_correct_rollback(self, mock_create):
+        """Проверка на корректный rollback с непредвиденной ошибкой после списания средств"""
+        mock_create.side_effect = ValueError("Some error")
+
+        # Денег достаточно, без роллбэка будет списание
+        with self.assertRaises(ValueError):
+            PortfolioService().buy(user=self.user_1, symbol="btc", amount=Decimal("1"))
+
+        balance = Balance.objects.get(user=self.user_1)
+
+        # Проверяем, что баланс не изменился
+        self.assertEqual(balance.amount, Decimal("1000"))
 
     def test_success_sell_balance_up_portfolio_down(self):
         """Проверка на успешную продажу"""

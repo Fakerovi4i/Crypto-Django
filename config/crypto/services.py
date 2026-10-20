@@ -156,17 +156,21 @@ def analytics_cache() -> None:
     )
 
 
+def _get_latest_coin_price(symbol: str) -> CoinPrice:
+    last_snapshot = _get_latest_snapshot_helper()
+    coin = CoinPrice.objects.filter(snapshot=last_snapshot, symbol=symbol).order_by("-id").first()
+    if coin is None:
+        raise ValueError("Coin not found")
+    return coin
+
+
 class PortfolioService:
     @transaction.atomic
-    def buy(self, user: User, symbol: str, amount: Decimal) -> Portfolio | tuple[Portfolio, Decimal]:
+    def buy(self, user: User, symbol: str, amount: Decimal) -> tuple[Portfolio, Decimal]:
         symbol = symbol.lower()
         if amount <= 0:
             raise ValueError("Amount must be positive")
-
-        last_snapshot = _get_latest_snapshot_helper()
-        coin: CoinPrice | None = CoinPrice.objects.filter(snapshot=last_snapshot, symbol=symbol).order_by("-id").first()
-        if coin is None:
-            raise ValueError("Coin not found")
+        coin = _get_latest_coin_price(symbol)
         total_price = (coin.price * amount).quantize(Decimal("0.00000001"))
 
         balance: Balance = Balance.objects.select_for_update().get(user=user)
@@ -199,11 +203,7 @@ class PortfolioService:
         if amount > position.amount:
             raise ValueError("Not enough amount in portfolio")
 
-        # Аварийная проверка на удаление снимка из админки
-        last_snapshot = _get_latest_snapshot_helper()
-        coin: CoinPrice | None = CoinPrice.objects.filter(snapshot=last_snapshot, symbol=symbol).order_by("-id").first()
-        if coin is None:
-            raise ValueError("Coin not found in database")
+        coin = _get_latest_coin_price(symbol)
 
         position.amount -= amount
         if position.amount == 0:
@@ -217,25 +217,24 @@ class PortfolioService:
         balance.save(update_fields=["amount"])
         return balance
 
-    def list_positions(self, user: User) -> QuerySet[Portfolio]:
+    @staticmethod
+    def subquery_price() -> QuerySet:
         snapshot = _get_latest_snapshot_helper()
-        price_sub = (
+        return (
             CoinPrice.objects.filter(snapshot=snapshot, symbol=OuterRef("symbol")).values("price").order_by("-id")[:1]
         )
 
-        portfolio_with_curr_price = Portfolio.objects.filter(user=user).annotate(current_price=Subquery(price_sub))
+    def list_positions(self, user: User) -> QuerySet[Portfolio]:
+        portfolio_with_curr_price = Portfolio.objects.filter(user=user).annotate(
+            current_price=Subquery(self.subquery_price())
+        )
 
         return portfolio_with_curr_price
 
     def get_summary(self, user: User) -> dict[str, Any]:
-        snapshot = _get_latest_snapshot_helper()
-        prices_sub = (
-            CoinPrice.objects.filter(snapshot=snapshot, symbol=OuterRef("symbol")).values("price").order_by("-id")[:1]
-        )
-
         positions = list(
             Portfolio.objects.filter(user=user)
-            .annotate(current_price=Subquery(prices_sub))
+            .annotate(current_price=Subquery(self.subquery_price()))
             .annotate(
                 current_value=F("amount") * F("current_price"),
                 profit=F("amount") * (F("current_price") - F("buy_price")),
