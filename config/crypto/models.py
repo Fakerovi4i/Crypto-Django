@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator
 from django.db import models
 
 
@@ -53,3 +56,73 @@ class WatchlistItem(models.Model):
 
     def __str__(self):
         return f"{self.user} — {self.coin_symbol}"
+
+
+class Balance(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="balance",
+        verbose_name="Пользователь",
+    )
+
+    amount = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        verbose_name="Баланс в USD",
+        default=0,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+
+    class Meta:
+        verbose_name = "Balance"
+        verbose_name_plural = "Кошельки"
+
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gte=0),
+                name="balance_amount_non_negative",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user} -- {self.amount}"
+
+
+class Portfolio(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="portfolios", verbose_name="Пользователь")
+    symbol = models.CharField(max_length=50, verbose_name="Обозначение")
+    amount = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        verbose_name="Количество",
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    buy_price = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        verbose_name="Цена покупки",
+    )
+    bought_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата покупки")
+
+    class Meta:
+        verbose_name = "Позиция портфеля"
+        verbose_name_plural = "Позиции портфеля"
+        ordering = ["-bought_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "symbol"],
+                name="unique_user_symbol_portfolio",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name="portfolio_amount_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(buy_price__gt=0),
+                name="portfolio_buy_price_positive",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user} -- {self.amount} -- {self.symbol} -- {self.buy_price}"

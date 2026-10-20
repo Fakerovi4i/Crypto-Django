@@ -1,13 +1,14 @@
 from decimal import Decimal
+from typing import Any
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.db.models import Avg, Max, Min, QuerySet, Sum
+from django.db.models import Avg, F, Max, Min, OuterRef, QuerySet, Subquery, Sum
 from django.db.models.functions import Abs
 
-from crypto.models import CoinPrice, Snapshot, WatchlistItem
+from crypto.models import Balance, CoinPrice, Portfolio, Snapshot, WatchlistItem
 from crypto.providers.base import BaseProvider
 from crypto.providers.entities import Coin
 from crypto.providers.provider_factory import get_provider
@@ -153,3 +154,98 @@ def analytics_cache() -> None:
         },
         timeout=CACHE_TTL,
     )
+
+
+def _get_latest_coin_price(symbol: str) -> CoinPrice:
+    last_snapshot = _get_latest_snapshot_helper()
+    coin = CoinPrice.objects.filter(snapshot=last_snapshot, symbol=symbol).order_by("-id").first()
+    if coin is None:
+        raise ValueError("Coin not found")
+    return coin
+
+
+class PortfolioService:
+    @transaction.atomic
+    def buy(self, user: User, symbol: str, amount: Decimal) -> tuple[Portfolio, Decimal]:
+        symbol = symbol.lower()
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+        coin = _get_latest_coin_price(symbol)
+        total_price = (coin.price * amount).quantize(Decimal("0.00000001"))
+
+        balance: Balance = Balance.objects.select_for_update().get(user=user)
+        if total_price > balance.amount:
+            raise ValueError("Not enough balance")
+        balance.amount -= total_price
+        balance.save(update_fields=["amount"])
+
+        position: Portfolio | None = Portfolio.objects.filter(user=user, symbol=symbol).first()
+        if position is None:
+            position = Portfolio.objects.create(user=user, symbol=symbol, amount=amount, buy_price=coin.price)
+            return position, total_price
+
+        new_amount = position.amount + amount
+        position.buy_price = (position.amount * position.buy_price + total_price) / new_amount
+        position.amount = new_amount
+        position.save(update_fields=["amount", "buy_price"])
+        return position, total_price
+
+    @transaction.atomic
+    def sell(self, user: User, symbol: str, amount: Decimal) -> Balance:
+        symbol = symbol.lower()
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+
+        balance: Balance = Balance.objects.select_for_update().get(user=user)
+        position: Portfolio | None = Portfolio.objects.filter(user=user, symbol=symbol).first()
+        if position is None:
+            raise ValueError("Position not found in portfolio")
+        if amount > position.amount:
+            raise ValueError("Not enough amount in portfolio")
+
+        coin = _get_latest_coin_price(symbol)
+
+        position.amount -= amount
+        if position.amount == 0:
+            position.delete()
+        else:
+            position.save(update_fields=["amount"])
+
+        total_sell_price = (coin.price * amount).quantize(Decimal("0.00000001"))
+        balance.amount += total_sell_price
+
+        balance.save(update_fields=["amount"])
+        return balance
+
+    @staticmethod
+    def subquery_price() -> QuerySet:
+        snapshot = _get_latest_snapshot_helper()
+        return (
+            CoinPrice.objects.filter(snapshot=snapshot, symbol=OuterRef("symbol")).values("price").order_by("-id")[:1]
+        )
+
+    def list_positions(self, user: User) -> QuerySet[Portfolio]:
+        portfolio_with_curr_price = Portfolio.objects.filter(user=user).annotate(
+            current_price=Subquery(self.subquery_price())
+        )
+
+        return portfolio_with_curr_price
+
+    def get_summary(self, user: User) -> dict[str, Any]:
+        positions = list(
+            Portfolio.objects.filter(user=user)
+            .annotate(current_price=Subquery(self.subquery_price()))
+            .annotate(
+                current_value=F("amount") * F("current_price"),
+                profit=F("amount") * (F("current_price") - F("buy_price")),
+            )
+            .filter(current_price__isnull=False)
+        )
+
+        analytics = {
+            "total_value": sum((pos.current_value for pos in positions), Decimal("0")),
+            "total_profit": sum((pos.profit for pos in positions), Decimal("0")),
+            "positions": positions,
+        }
+
+        return analytics

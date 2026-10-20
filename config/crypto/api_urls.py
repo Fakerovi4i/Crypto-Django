@@ -9,6 +9,7 @@ from crypto.views import (
     CoinPriceHistory,
     FetchSnapshotApi,
     FetchSnapshotStatusApi,
+    PortfolioViewSet,
     SnapshotViewSet,
     WatchlistViewSet,
 )
@@ -17,6 +18,7 @@ router = DefaultRouter()
 router.register(r"snapshots", SnapshotViewSet)
 router.register(r"coins", CoinPriceHistory)
 router.register(r"watchlist", WatchlistViewSet, basename="watchlist")
+router.register(r"portfolio", PortfolioViewSet, basename="portfolio")
 
 urlpatterns = [
     path("schema/", SpectacularAPIView.as_view(), name="schema"),

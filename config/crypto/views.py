@@ -8,6 +8,7 @@ from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers, status, views, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import CursorPagination
@@ -22,13 +23,19 @@ from crypto.models import CoinPrice, Snapshot, WatchlistItem
 from crypto.permissions import IsAdminOrReadOnly
 from crypto.serializers import (
     AnalyticsMarketStatsSerializer,
+    BalanceSerializer,
     CoinPriceHistorySerializer,
     CoinPriceSerializer,
+    PortfolioInSerializer,
+    PortfolioPositionsSerializer,
+    PortfolioSerializer,
+    PortfolioSummarySerializer,
     SnapshotDetailSerializer,
     SnapshotListSerializer,
     WatchlistItemSerializer,
 )
 from crypto.services import (
+    PortfolioService,
     analytics_market_stats,
     analytics_top_movers,
     analytics_volume_leaders,
@@ -198,3 +205,73 @@ class FetchSnapshotStatusApi(views.APIView):
     def get(self, request: Request, task_id: str, *args, **kwargs) -> Response:
         result: AsyncResult[Any] = AsyncResult(task_id)
         return Response({"task_id": result.id, "status": result.status, "result": str(result.result)})
+
+
+@extend_schema(tags=["Portfolio"])
+class PortfolioViewSet(viewsets.ViewSet):
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        summary="Купить монету",
+        request=PortfolioInSerializer,
+        responses={201: PortfolioSerializer},
+    )
+    @action(detail=False, methods=["post"])
+    def buy(self, request, *args, **kwargs):
+        serializer = PortfolioInSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            position, transaction_price = PortfolioService().buy(
+                user=request.user,
+                symbol=serializer.validated_data["symbol"],
+                amount=serializer.validated_data["amount"],
+            )
+        except ValueError as e:
+            raise ValidationError(str(e)) from e
+
+        position.transaction_price = transaction_price
+
+        return Response(PortfolioSerializer(position).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(summary="Продать монету", request=PortfolioInSerializer, responses={200: BalanceSerializer})
+    @action(detail=False, methods=["post"])
+    def sell(self, request, *args, **kwargs):
+        serializer = PortfolioInSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            balance = PortfolioService().sell(
+                user=request.user,
+                symbol=serializer.validated_data["symbol"],
+                amount=serializer.validated_data["amount"],
+            )
+        except ValueError as e:
+            raise ValidationError(str(e)) from e
+
+        return Response(BalanceSerializer(balance).data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Показать список купленных позиций", responses={200: PortfolioPositionsSerializer(many=True)}
+    )
+    def list(self, request, *args, **kwargs):
+        try:
+            positions = PortfolioService().list_positions(user=request.user)
+        except ValueError as e:
+            raise NotFound(str(e)) from e
+
+        serializer = PortfolioPositionsSerializer(positions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Стоимость портфеля",
+        responses={200: PortfolioSummarySerializer},
+    )
+    @action(detail=False, methods=["get"])
+    def summary(self, request, *args, **kwargs):
+
+        try:
+            summary = PortfolioService().get_summary(user=request.user)
+        except ValueError as e:
+            raise NotFound(str(e)) from e
+
+        return Response(PortfolioSummarySerializer(summary).data, status=status.HTTP_200_OK)

@@ -29,6 +29,7 @@ services:
     networks:
       - dbnet
     volumes:
+      - ./config:/app/config
       - staticfiles:/app/config/staticfiles
     expose:
       - "8000"
@@ -42,6 +43,8 @@ services:
     image: postgres:18-bookworm
     container_name: postgres
     restart: always
+    ports:
+      - "5433:5432"
     environment:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
