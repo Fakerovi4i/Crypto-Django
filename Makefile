@@ -1,4 +1,4 @@
-.PHONY: up down logs build test shell static ps errors bash stop superuser start whoami ruff-fix ruff-check ruff-format migrate tables logs_app
+.PHONY: up down logs build test shell static ps errors bash stop superuser start whoami ruff-fix ruff-check ruff-format migrate tables logs_app psql
 
 # Запуск контейнера и тесты
 up:
