@@ -35,6 +35,9 @@ class CoinPrice(models.Model):
     class Meta:
         verbose_name = "Крипто-монета"
         verbose_name_plural = "Крипто-монеты"
+        indexes = [
+            models.Index(fields=["snapshot", "symbol"], name="idx_coinprice_snapshot_symbol"),
+        ]
 
 
 class WatchlistItem(models.Model):
