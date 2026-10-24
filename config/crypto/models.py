@@ -18,16 +18,6 @@ class Snapshot(models.Model):
         ordering = ["-created_at"]
 
 
-
-
-
-
-
-
-
-
-
-
 class CoinPrice(models.Model):
     coin_id = models.CharField(max_length=100, verbose_name="ID")
     name = models.CharField(max_length=100, verbose_name="Название")
