@@ -57,7 +57,9 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Migrations check
-        run: python manage.py makemigrations --check --dry-run
+        run: |
+          cd config
+          python manage.py makemigrations --check --dry-run
 
       - name: Apply migrations
         run: |
