@@ -60,13 +60,19 @@ jobs:
         run: python manage.py makemigrations --check --dry-run
 
       - name: Apply migrations
-        run: python manage.py migrate
+        run: |
+          cd config
+          python manage.py migrate
 
       - name: Run unit tests
-        run: python manage.py test crypto.tests.unit --failfast --settings=config.settings_test
+        run: |
+          cd config
+          python manage.py test crypto.tests.unit --failfast --settings=config.settings_test
 
       - name: Run integration tests
-        run: python manage.py test crypto.tests.integration --failfast --settings=config.settings_test
+        run: |
+          cd config
+          python manage.py test crypto.tests.integration --failfast --settings=config.settings_test
 
     services:
       redis:
