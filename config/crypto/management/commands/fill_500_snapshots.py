@@ -62,7 +62,7 @@ class Command(BaseCommand):
 
         # Обновляем статистику планировщика, иначе EXPLAIN покажет план по устаревшим данным
         with connection.cursor() as cursor:
-            cursor.execute("ANALYZE crypto_snapshot")
-            cursor.execute("ANALYZE crypto_coinprice")
+            cursor.execute(f"ANALYZE {Snapshot._meta.db_table}")
+            cursor.execute(f"ANALYZE {CoinPrice._meta.db_table}")
 
         self.stdout.write(self.style.SUCCESS(f"Создано снимков: {n_snapshots}, строк CoinPrice: {len(prices)}"))
