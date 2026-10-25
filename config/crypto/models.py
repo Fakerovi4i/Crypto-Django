@@ -30,11 +30,20 @@ class CoinPrice(models.Model):
         max_digits=10, decimal_places=4, verbose_name="Изменение за 24 часа"
     )
 
-    snapshot = models.ForeignKey(Snapshot, on_delete=models.CASCADE, related_name="coin_prices", verbose_name="Снимок")
+    snapshot = models.ForeignKey(
+        Snapshot,
+        on_delete=models.CASCADE,
+        related_name="coin_prices",
+        verbose_name="Снимок",
+        db_index=False,
+    )
 
     class Meta:
         verbose_name = "Крипто-монета"
         verbose_name_plural = "Крипто-монеты"
+        indexes = [
+            models.Index(fields=["snapshot", "symbol"], name="idx_coinprice_snapshot_symbol"),
+        ]
 
 
 class WatchlistItem(models.Model):

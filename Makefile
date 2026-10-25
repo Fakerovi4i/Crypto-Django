@@ -1,4 +1,4 @@
-.PHONY: up down logs build test shell static ps errors bash stop superuser start whoami ruff-fix ruff-check ruff-format migrate tables logs_app psql
+.PHONY: up down logs build test shell static ps errors bash stop superuser start whoami ruff-fix ruff-check ruff-format migrate tables logs_app psql fill_500
 
 # Запуск контейнера и тесты
 up:
@@ -71,3 +71,6 @@ tables:
 
 psql:
 	docker compose exec postgres sh -c 'psql -U $$POSTGRES_USER -d $$POSTGRES_DB'
+
+fill_500:
+	docker compose exec crypto_app python manage.py fill_500_snapshots
