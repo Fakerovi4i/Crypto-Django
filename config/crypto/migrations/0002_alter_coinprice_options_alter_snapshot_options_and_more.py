@@ -6,7 +6,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('crypto', '0001_initial'),
+        ('crypto', '0002_cleanup_orphan_coinprices'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
