@@ -15,10 +15,11 @@ click-plugins==1.1.1.2
 click-repl==0.4.0
 colorama==0.4.6
 distlib==0.4.3
-Django==6.1.1
+Django==6.0.9
 django-debug-toolbar==8.0.0
 django-extensions==4.1
 django-filter==26.2
+django-prometheus==2.5.0
 django-redis==7.0.0
 django-stubs==6.1.1
 django-stubs-ext==6.1.1
@@ -28,6 +29,7 @@ djangorestframework_simplejwt==5.5.1
 drf-spectacular==0.30.0
 executing==2.2.1
 filelock==4.0.7
+graphviz==0.21
 gunicorn==26.2.0
 identify==2.6.20
 idna==3.19
@@ -49,9 +51,10 @@ parso==0.8.7
 pathspec==1.1.1
 platformdirs==4.12.2
 pre_commit==4.6.2
+prometheus_client==0.26.0
 prompt_toolkit==3.0.53
 psutil==7.2.2
-#psycopg2==2.9.12
+#psycopg2==2.9.12 для windows
 psycopg2-binary==2.9.12
 pure_eval==0.2.3
 Pygments==2.21.0

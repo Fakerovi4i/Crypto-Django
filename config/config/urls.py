@@ -15,4 +15,6 @@ urlpatterns = [
     path("__debug__/", include("debug_toolbar.urls")),
     # ─── Версионированное API ───
     path("api/<str:version>/", include("crypto.api_urls")),
+    # ─── Метрики ───
+    path("", include("django_prometheus.urls")),
 ]
