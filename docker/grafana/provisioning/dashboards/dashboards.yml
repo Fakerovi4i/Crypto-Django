@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: 'Crypto Dashboards'       # Уникальное имя провайдера
+    orgId: 1                        # ID организации в Grafana (по умолчанию 1)
+    folder: ''                      # Папка в UI Grafana (пустая = General)
+    type: file                      # Тип провайдера — файлы
+    disableDeletion: false          # Разрешить удаление дашборда через UI
+    updateIntervalSeconds: 10       # Как часто проверять изменения в JSON-файле
+    allowUiUpdates: false           # Запретить редактирование через UI (GitOps)
+    options:
+      path: /var/lib/grafana/dashboards
