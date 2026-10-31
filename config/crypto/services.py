@@ -7,6 +7,7 @@ from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.db.models import Avg, F, Max, Min, OuterRef, QuerySet, Subquery, Sum
 from django.db.models.functions import Abs
+from prometheus_client import Counter
 
 from crypto.models import Balance, CoinPrice, Portfolio, Snapshot, WatchlistItem
 from crypto.providers.base import BaseProvider
@@ -17,6 +18,14 @@ CACHE_TTL = 70 * 60
 TOP_MOVERS = "top_movers"
 MARKET_STATS = "market_stats"
 VOLUME_LEADERS = "volume_leaders"
+
+CACHE_LOOKUPS = Counter("crypto_cache_total", "Cache lookups", labelnames=["key_prefix", "result"])
+
+
+def _cache_get(key: str) -> Any | None:
+    result = cache.get(key)
+    CACHE_LOOKUPS.labels(key_prefix=key, result="hit" if result is not None else "miss").inc()
+    return result
 
 
 def watchlist_item_add(*, symbol: str, user: User) -> WatchlistItem:
@@ -73,7 +82,7 @@ def _compute_market_stats() -> dict[str, Decimal]:
 
 def analytics_market_stats() -> dict[str, Decimal]:
     """Возвращает статистику по рынку c кэшированием"""
-    cached = cache.get(MARKET_STATS)
+    cached = _cache_get(MARKET_STATS)
     if cached is not None:
         return cached
     data = _compute_market_stats()
@@ -93,7 +102,7 @@ def _compute_top_movers() -> list[CoinPrice]:
 
 def analytics_top_movers() -> list[CoinPrice]:
     """Возвращает до 10 монет по изменению цены за 24 часа с кэшированием"""
-    cached = cache.get(TOP_MOVERS)
+    cached = _cache_get(TOP_MOVERS)
     if cached is not None:
         return cached
     data = _compute_top_movers()
@@ -109,7 +118,7 @@ def _compute_volume_leaders() -> list[CoinPrice]:
 
 def analytics_volume_leaders() -> list[CoinPrice]:
     """Возвращает список до 10 монет по максимальному обьему торгов c кэшированием"""
-    cached = cache.get(VOLUME_LEADERS)
+    cached = _cache_get(VOLUME_LEADERS)
     if cached is not None:
         return cached
     data = _compute_volume_leaders()
