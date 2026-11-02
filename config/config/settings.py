@@ -14,8 +14,11 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import sentry_sdk
 import structlog
+from django.http import Http404
 from dotenv import load_dotenv
+from rest_framework.exceptions import NotFound, Throttled
 
 load_dotenv()
 
@@ -30,6 +33,11 @@ DEBUG = False
 ALLOWED_HOSTS = ["*"]
 
 INTERNAL_IPS = ["127.0.0.1", "172.18.0.1"]
+
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+
+if SENTRY_DSN:
+    sentry_sdk.init(dsn=SENTRY_DSN, send_default_pii=True, ignore_errors=[Throttled, NotFound, Http404])
 
 
 def show_toolbar(request):

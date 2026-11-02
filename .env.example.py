@@ -13,3 +13,5 @@ DEFAULT_CACHE = "redis://redis:6379/2"
 THROTTLING_CACHE = "redis://redis:6379/3"
 
 API_KEY = "Your_API_Key_provider"
+ELASTIC_PASSWORD = "Your_Elastic_Password"
+SENTRY_DSN = "Your_DSN"
