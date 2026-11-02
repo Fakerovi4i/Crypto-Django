@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import Any
 
+import structlog
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
@@ -13,6 +14,9 @@ from crypto.models import Balance, CoinPrice, Portfolio, Snapshot, WatchlistItem
 from crypto.providers.base import BaseProvider
 from crypto.providers.entities import Coin
 from crypto.providers.provider_factory import get_provider
+
+logger = structlog.get_logger(__name__)
+
 
 CACHE_TTL = 70 * 60
 TOP_MOVERS = "top_movers"
@@ -35,7 +39,14 @@ def watchlist_item_add(*, symbol: str, user: User) -> WatchlistItem:
     provider: BaseProvider = get_provider()
     with provider as p:
         if not p.symbol_exists(symbol):
+            logger.warning(
+                "validate_symbol", user_id=user.pk, symbol=symbol, provider=settings.EXCHANGE_PROVIDER, status="error"
+            )
             raise ValueError("Symbol not found")
+        logger.info(
+            "validate_symbol", user_id=user.pk, symbol=symbol, provider=settings.EXCHANGE_PROVIDER, status="success"
+        )
+
     try:
         item = WatchlistItem.objects.create(user=user, coin_symbol=symbol)
     except IntegrityError:
@@ -184,6 +195,15 @@ class PortfolioService:
 
         balance: Balance = Balance.objects.select_for_update().get(user=user)
         if total_price > balance.amount:
+            logger.warning(
+                "buy_coin",
+                user_id=user.pk,
+                symbol=symbol,
+                amount=str(amount),
+                total_price=str(total_price),
+                balance=str(balance.amount),
+                status="error",
+            )
             raise ValueError("Not enough balance")
         balance.amount -= total_price
         balance.save(update_fields=["amount"])
@@ -191,12 +211,20 @@ class PortfolioService:
         position: Portfolio | None = Portfolio.objects.filter(user=user, symbol=symbol).first()
         if position is None:
             position = Portfolio.objects.create(user=user, symbol=symbol, amount=amount, buy_price=coin.price)
-            return position, total_price
-
-        new_amount = position.amount + amount
-        position.buy_price = (position.amount * position.buy_price + total_price) / new_amount
-        position.amount = new_amount
-        position.save(update_fields=["amount", "buy_price"])
+        else:
+            new_amount = position.amount + amount
+            position.buy_price = (position.amount * position.buy_price + total_price) / new_amount
+            position.amount = new_amount
+            position.save(update_fields=["amount", "buy_price"])
+        logger.info(
+            "buy_coin",
+            user_id=user.pk,
+            symbol=symbol,
+            amount=str(amount),
+            total_price=str(total_price),
+            balance=str(balance.amount),
+            status="success",
+        )
         return position, total_price
 
     @transaction.atomic
@@ -208,6 +236,7 @@ class PortfolioService:
         balance: Balance = Balance.objects.select_for_update().get(user=user)
         position: Portfolio | None = Portfolio.objects.filter(user=user, symbol=symbol).first()
         if position is None:
+            logger.warning("sell_position", user_id=user.pk, symbol=symbol, amount=str(amount))
             raise ValueError("Position not found in portfolio")
         if amount > position.amount:
             raise ValueError("Not enough amount in portfolio")
@@ -224,6 +253,15 @@ class PortfolioService:
         balance.amount += total_sell_price
 
         balance.save(update_fields=["amount"])
+        logger.info(
+            "sell_position",
+            user_id=user.pk,
+            symbol=symbol,
+            amount=str(amount),
+            balance=str(balance.amount),
+            position=position.amount,
+            status="success",
+        )
         return balance
 
     @staticmethod
