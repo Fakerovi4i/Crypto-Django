@@ -5,11 +5,12 @@ import structlog
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, connection, transaction
 from django.db.models import Avg, F, Max, Min, OuterRef, QuerySet, Subquery, Sum
 from django.db.models.functions import Abs
 from prometheus_client import Counter
 
+from config.celery import app as celery_app
 from crypto.models import Balance, CoinPrice, Portfolio, Snapshot, WatchlistItem
 from crypto.providers.base import BaseProvider
 from crypto.providers.entities import Coin
@@ -296,3 +297,47 @@ class PortfolioService:
         }
 
         return analytics
+
+
+def _check_db() -> bool:
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+        return True
+    except DatabaseError as e:
+        logger.warning("health_check_failed", check="database", error=str(e))
+        return False
+
+
+def _check_cache() -> bool:
+    try:
+        cache.set("health_chech", "ok", timeout=5)
+        # По ответу понимаем жив ли редис, соединение не проверить из-за IGNORE_EXCEPTIONS
+        return cache.get("health_chech") == "ok"
+    except Exception as e:
+        logger.warning("health_check_failed", check="cache", error=str(e))
+        return False
+
+
+def _check_celery_broker() -> bool:
+    try:
+        resp = celery_app.control.ping(timeout=2.0, limit=1)
+    except Exception as e:
+        logger.warning("health_check_failed", check="celery", error=str(e))
+        return False
+    return bool(resp)
+
+
+def get_helth_db_cache_celery() -> tuple[dict, bool]:
+    checks = {
+        "database": _check_db(),
+        "cache": _check_cache(),
+        "celery_broker": _check_celery_broker(),
+    }
+    is_ok = all(checks.values())
+    response = {
+        "status": "ok" if is_ok else "degraded",
+        "checks": {name: "ok" if ok else "fail" for name, ok in checks.items()},
+    }
+    return response, is_ok

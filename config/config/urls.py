@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from crypto.views import HealthView
+
 admin.site.site_header = "Панель администрирования"
 admin.site.index_title = "Анализатор крипто-валют"
 
@@ -17,4 +19,6 @@ urlpatterns = [
     path("api/<str:version>/", include("crypto.api_urls")),
     # ─── Метрики ───
     path("", include("django_prometheus.urls")),
+    # ─── Здоровье ───
+    path("health/", HealthView.as_view(), name="health_check"),
 ]
