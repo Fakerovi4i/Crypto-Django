@@ -166,8 +166,7 @@ services:
     networks:
       - elk
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - "127.0.0.1:9200:9200"
 
   logstash:
     image: logstash:8.19.23
@@ -179,9 +178,7 @@ services:
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
       LS_JAVA_OPTS: "-Xmx512m -Xms512m"
     ports:
-      - "5044:5044"
-      - "5000:5000"
-      - "9600:9600"
+      - "127.0.0.1:9600:9600"
     networks:
       - elk
     depends_on:

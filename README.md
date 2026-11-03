@@ -70,3 +70,52 @@ celery -A config beat -l info
 - API: http://localhost:8000/api/v1/
 - Swagger: http://localhost:8000/api/v1/docs/
 - JWT: http://localhost:8000/api/token/
+
+# Observability (метрики, логи, ошибки)
+
+Стек поднимается вместе с остальными контейнерами через Docker (`make build up`).
+
+### 1. Подготовка `.env`
+
+Переменные, которые нужны для observability:
+
+```env
+GRAFANA_PASSWORD=...      # пароль admin в Grafana
+ELASTIC_PASSWORD=...      # пароль пользователя elastic (Elasticsearch / Kibana / Logstash)
+SENTRY_DSN=               # DSN проекта из sentry.io; если пусто — Sentry не инициализируется
+```
+
+### 2. Запуск и проверка
+
+```bash
+make build up
+docker compose ps         # дождаться, пока elasticsearch станет healthy
+```
+
+
+### 3. Доступ к сервисам
+
+| Сервис | URL                                 | Доступ |
+|---|-------------------------------------|---|
+| Grafana | http://localhost/grafana/           | логин `admin`, пароль `GRAFANA_PASSWORD` |
+| Prometheus | http://localhost/prometheus/        | без авторизации |
+| Prometheus targets | http://localhost/prometheus/targets | job `crypto_app` должен быть UP |
+| Метрики приложения | http://localhost:8000/metrics       | только с хоста; через nginx (порт 80) закрыто |
+| Health-check | http://localhost/health/            | 200 `ok` или 503 `degraded` |
+| Kibana | http://localhost:5601               | логин `elastic`, пароль `ELASTIC_PASSWORD` |
+| Elasticsearch | http://localhost:9200               | логин `elastic`, пароль `ELASTIC_PASSWORD` |
+| Logstash | http://localhost:9600 (API)         | — |
+| Sentry | https://sentry.io                   | свой проект, DSN в `SENTRY_DSN` |
+
+
+### 4. Пароль Elasticsearch и токен для Kibana через API
+
+```bash
+# сбросить пароль пользователя elastic (новый пароль будет выведен в консоль)
+docker compose exec elasticsearch bin/elasticsearch-reset-password -u elastic
+
+# создать service-токен для Kibana (подставить свой пароль elastic)
+curl -X POST -u elastic:<ELASTIC_PASSWORD> "http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-api-token?pretty"
+
+# После смены пароля обновить `ELASTIC_PASSWORD` в `.env`.
+```

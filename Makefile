@@ -1,4 +1,4 @@
-.PHONY: up down logs build test shell static ps errors bash stop superuser start whoami ruff-fix ruff-check ruff-format migrate tables logs_app psql fill_500
+.PHONY: up down logs build test shell static ps errors bash stop superuser start whoami ruff-fix ruff-check ruff-format migrate tables logs_app psql fill_500 fetch_snapshot
 
 # Запуск контейнера и тесты
 up:
@@ -74,3 +74,6 @@ psql:
 
 fill_500:
 	docker compose exec crypto_app python manage.py fill_500_snapshots
+
+fetch:
+	docker compose exec crypto_app python manage.py fetch_snapshot
