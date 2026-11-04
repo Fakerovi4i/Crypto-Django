@@ -85,6 +85,8 @@ GRAFANA_PASSWORD=...      # пароль admin в Grafana
 ELASTIC_PASSWORD=...      # пароль пользователя elastic (Elasticsearch / Kibana / Logstash)
 SENTRY_DSN=               # DSN проекта из sentry.io; если пусто — Sentry не инициализируется
 KIBANA_SERVICE_TOKEN=     # токен из kibana-api-token (шаг создания ниже)
+TELEGRAM_BOT_TOKEN =...   # для коректного запуска Grafana необходимо указать какое нибудь значение
+TELEGRAM_CHAT_ID =...     # для коректного запуска Grafana необходимо указать какое нибудь значение
 ```
 
 ### 2. Запуск и проверка
