@@ -16,11 +16,12 @@ python3 manage.py createsuperuser
 - Docker + Docker Compose (для запуска в контейнерах)
 
 
-### Запуск через Docker (рекомендуется)
+### Запуск через Docker (настройка ELK в блоке Observability)
 
 ```bash
 make build up     # собрать образы и поднять контейнеры
 make superuser  # создать админа (опционально)
+make fetch     # Создать первый снимок
 ```
 
 ### Локальный запуск (без Docker)
@@ -83,14 +84,19 @@ celery -A config beat -l info
 GRAFANA_PASSWORD=...      # пароль admin в Grafana
 ELASTIC_PASSWORD=...      # пароль пользователя elastic (Elasticsearch / Kibana / Logstash)
 SENTRY_DSN=               # DSN проекта из sentry.io; если пусто — Sentry не инициализируется
+KIBANA_SERVICE_TOKEN=     # токен из kibana-api-token (шаг создания ниже)
 ```
 
 ### 2. Запуск и проверка
 
 ```bash
+docker compose up elasticsearch
+docker compose ps # дождаться, пока elasticsearch станет healthy
+# создать service-токен для Kibana  (подставить свой пароль elastic)
+curl -X POST -u elastic:<ELASTIC_PASSWORD> "http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-api-token?pretty"
 make build up
-docker compose ps         # дождаться, пока elasticsearch станет healthy
 ```
+Импортировать файл в UI кибана \docker\kibana\saved_objects.ndjson
 
 
 ### 3. Доступ к сервисам
@@ -108,14 +114,20 @@ docker compose ps         # дождаться, пока elasticsearch стан�
 | Sentry | https://sentry.io                   | свой проект, DSN в `SENTRY_DSN` |
 
 
-### 4. Пароль Elasticsearch и токен для Kibana через API
+### 4. Kibana: импорт настроек (Опционально)
+
+После чистого старта импортировать в Kibana: Data View `django-logs-*`, Saved Search `errors-only`, `user-activity`, дашборд - `Django logs`.
+
+1. Открыть Kibana: http://localhost:5601 (логин `elastic`, пароль `ELASTIC_PASSWORD`).
+2. Stack Management → Saved Objects → **Import**.
+3. Выбрать файл из проекта по пути `docker/kibana/saved_objects.ndjson`.
+
+
+То же командой:
 
 ```bash
-# сбросить пароль пользователя elastic (новый пароль будет выведен в консоль)
-docker compose exec elasticsearch bin/elasticsearch-reset-password -u elastic
-
-# создать service-токен для Kibana (подставить свой пароль elastic)
-curl -X POST -u elastic:<ELASTIC_PASSWORD> "http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-api-token?pretty"
-
-# После смены пароля обновить `ELASTIC_PASSWORD` в `.env`.
+curl -X POST -u elastic:<ELASTIC_PASSWORD> \
+  "http://localhost:5601/api/saved_objects/_import?overwrite=true" \
+  -H "kbn-xsrf: true" \
+  --form file=@docker/kibana/saved_objects.ndjson
 ```

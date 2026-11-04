@@ -260,7 +260,7 @@ class PortfolioService:
             symbol=symbol,
             amount=str(amount),
             balance=str(balance.amount),
-            position=position.amount,
+            position=str(position.amount),
             status="success",
         )
         return balance

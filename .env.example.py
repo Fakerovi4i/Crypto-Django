@@ -14,5 +14,9 @@ THROTTLING_CACHE = "redis://redis:6379/3"
 
 API_KEY = "Your_API_Key_provider"
 ELASTIC_PASSWORD = "Your_Elastic_Password"
-SENTRY_DSN = "Your_DSN"
 GRAFANA_PASSWORD = "Your_Grafana_Password"
+KIBANA_SERVICE_TOKEN = "Your_Kibana_Service_Token"
+SENTRY_DSN = ""
+
+TELEGRAM_BOT_TOKEN = "Your token"
+TELEGRAM_CHAT_ID = "Your chat id"

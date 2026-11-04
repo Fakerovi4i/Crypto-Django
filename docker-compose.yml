@@ -140,6 +140,8 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
       - GF_SERVER_ROOT_URL=/grafana
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
@@ -157,9 +159,9 @@ services:
     environment:
       ES_JAVA_OPTS: "-Xmx512m -Xms512m"
       discovery.type: single-node
-      ELASTIC_PASSWORD: "1234"
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      test: ["CMD-SHELL", "curl -sf -u elastic:$$ELASTIC_PASSWORD http://localhost:9200/_cluster/health"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -171,8 +173,8 @@ services:
   logstash:
     image: logstash:8.19.23
     volumes:
-      - ./docker/logstash/config.yml:/usr/share/logstash/logstash.yml:ro
-      - ./docker/logstash/pipelines.yml:/usr/share/logstash/pipelines.yml:ro
+      - ./docker/logstash/config.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ./docker/logstash/pipelines.yml:/usr/share/logstash/config/pipelines.yml:ro
       - ./docker/logstash/pipeline:/usr/share/logstash/pipeline/:ro
     environment:
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
@@ -182,12 +184,29 @@ services:
     networks:
       - elk
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
+
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9600 | grep -q version" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
   kibana:
     image: kibana:8.19.23
+    environment:
+      KIBANA_SERVICE_TOKEN: ${KIBANA_SERVICE_TOKEN}
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:5601/api/status | grep -q available"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 80s
     volumes:
       - ./docker/kibana/config.yml:/usr/share/kibana/config/kibana.yml:ro
     networks:
