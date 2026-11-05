@@ -1,22 +1,36 @@
 from decimal import Decimal
 from typing import Any
 
+import structlog
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, connection, transaction
 from django.db.models import Avg, F, Max, Min, OuterRef, QuerySet, Subquery, Sum
 from django.db.models.functions import Abs
+from prometheus_client import Counter
 
+from config.celery import app as celery_app
 from crypto.models import Balance, CoinPrice, Portfolio, Snapshot, WatchlistItem
 from crypto.providers.base import BaseProvider
 from crypto.providers.entities import Coin
 from crypto.providers.provider_factory import get_provider
 
+logger = structlog.get_logger(__name__)
+
+
 CACHE_TTL = 70 * 60
 TOP_MOVERS = "top_movers"
 MARKET_STATS = "market_stats"
 VOLUME_LEADERS = "volume_leaders"
+
+CACHE_LOOKUPS = Counter("crypto_cache_total", "Cache lookups", labelnames=["key_prefix", "result"])
+
+
+def _cache_get(key: str) -> Any | None:
+    result = cache.get(key)
+    CACHE_LOOKUPS.labels(key_prefix=key, result="hit" if result is not None else "miss").inc()
+    return result
 
 
 def watchlist_item_add(*, symbol: str, user: User) -> WatchlistItem:
@@ -26,7 +40,14 @@ def watchlist_item_add(*, symbol: str, user: User) -> WatchlistItem:
     provider: BaseProvider = get_provider()
     with provider as p:
         if not p.symbol_exists(symbol):
+            logger.warning(
+                "validate_symbol", user_id=user.pk, symbol=symbol, provider=settings.EXCHANGE_PROVIDER, status="error"
+            )
             raise ValueError("Symbol not found")
+        logger.info(
+            "validate_symbol", user_id=user.pk, symbol=symbol, provider=settings.EXCHANGE_PROVIDER, status="success"
+        )
+
     try:
         item = WatchlistItem.objects.create(user=user, coin_symbol=symbol)
     except IntegrityError:
@@ -73,7 +94,7 @@ def _compute_market_stats() -> dict[str, Decimal]:
 
 def analytics_market_stats() -> dict[str, Decimal]:
     """Возвращает статистику по рынку c кэшированием"""
-    cached = cache.get(MARKET_STATS)
+    cached = _cache_get(MARKET_STATS)
     if cached is not None:
         return cached
     data = _compute_market_stats()
@@ -93,7 +114,7 @@ def _compute_top_movers() -> list[CoinPrice]:
 
 def analytics_top_movers() -> list[CoinPrice]:
     """Возвращает до 10 монет по изменению цены за 24 часа с кэшированием"""
-    cached = cache.get(TOP_MOVERS)
+    cached = _cache_get(TOP_MOVERS)
     if cached is not None:
         return cached
     data = _compute_top_movers()
@@ -109,7 +130,7 @@ def _compute_volume_leaders() -> list[CoinPrice]:
 
 def analytics_volume_leaders() -> list[CoinPrice]:
     """Возвращает список до 10 монет по максимальному обьему торгов c кэшированием"""
-    cached = cache.get(VOLUME_LEADERS)
+    cached = _cache_get(VOLUME_LEADERS)
     if cached is not None:
         return cached
     data = _compute_volume_leaders()
@@ -175,6 +196,15 @@ class PortfolioService:
 
         balance: Balance = Balance.objects.select_for_update().get(user=user)
         if total_price > balance.amount:
+            logger.warning(
+                "buy_coin",
+                user_id=user.pk,
+                symbol=symbol,
+                amount=str(amount),
+                total_price=str(total_price),
+                balance=str(balance.amount),
+                status="error",
+            )
             raise ValueError("Not enough balance")
         balance.amount -= total_price
         balance.save(update_fields=["amount"])
@@ -182,12 +212,20 @@ class PortfolioService:
         position: Portfolio | None = Portfolio.objects.filter(user=user, symbol=symbol).first()
         if position is None:
             position = Portfolio.objects.create(user=user, symbol=symbol, amount=amount, buy_price=coin.price)
-            return position, total_price
-
-        new_amount = position.amount + amount
-        position.buy_price = (position.amount * position.buy_price + total_price) / new_amount
-        position.amount = new_amount
-        position.save(update_fields=["amount", "buy_price"])
+        else:
+            new_amount = position.amount + amount
+            position.buy_price = (position.amount * position.buy_price + total_price) / new_amount
+            position.amount = new_amount
+            position.save(update_fields=["amount", "buy_price"])
+        logger.info(
+            "buy_coin",
+            user_id=user.pk,
+            symbol=symbol,
+            amount=str(amount),
+            total_price=str(total_price),
+            balance=str(balance.amount),
+            status="success",
+        )
         return position, total_price
 
     @transaction.atomic
@@ -199,6 +237,7 @@ class PortfolioService:
         balance: Balance = Balance.objects.select_for_update().get(user=user)
         position: Portfolio | None = Portfolio.objects.filter(user=user, symbol=symbol).first()
         if position is None:
+            logger.warning("sell_position", user_id=user.pk, symbol=symbol, amount=str(amount))
             raise ValueError("Position not found in portfolio")
         if amount > position.amount:
             raise ValueError("Not enough amount in portfolio")
@@ -215,6 +254,15 @@ class PortfolioService:
         balance.amount += total_sell_price
 
         balance.save(update_fields=["amount"])
+        logger.info(
+            "sell_position",
+            user_id=user.pk,
+            symbol=symbol,
+            amount=str(amount),
+            balance=str(balance.amount),
+            position=str(position.amount),
+            status="success",
+        )
         return balance
 
     @staticmethod
@@ -249,3 +297,47 @@ class PortfolioService:
         }
 
         return analytics
+
+
+def _check_db() -> bool:
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+        return True
+    except DatabaseError as e:
+        logger.warning("health_check_failed", check="database", error=str(e))
+        return False
+
+
+def _check_cache() -> bool:
+    try:
+        cache.set("health_chech", "ok", timeout=5)
+        # По ответу понимаем жив ли редис, соединение не проверить из-за IGNORE_EXCEPTIONS
+        return cache.get("health_chech") == "ok"
+    except Exception as e:
+        logger.warning("health_check_failed", check="cache", error=str(e))
+        return False
+
+
+def _check_celery_broker() -> bool:
+    try:
+        resp = celery_app.control.ping(timeout=2.0, limit=1)
+    except Exception as e:
+        logger.warning("health_check_failed", check="celery", error=str(e))
+        return False
+    return bool(resp)
+
+
+def get_helth_db_cache_celery() -> tuple[dict, bool]:
+    checks = {
+        "database": _check_db(),
+        "cache": _check_cache(),
+        "celery_broker": _check_celery_broker(),
+    }
+    is_ok = all(checks.values())
+    response = {
+        "status": "ok" if is_ok else "degraded",
+        "checks": {name: "ok" if ok else "fail" for name, ok in checks.items()},
+    }
+    return response, is_ok

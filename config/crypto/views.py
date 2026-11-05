@@ -39,6 +39,7 @@ from crypto.services import (
     analytics_market_stats,
     analytics_top_movers,
     analytics_volume_leaders,
+    get_helth_db_cache_celery,
     watchlist_item_add,
     watchlist_item_delete,
     watchlist_items_list,
@@ -275,3 +276,13 @@ class PortfolioViewSet(viewsets.ViewSet):
             raise NotFound(str(e)) from e
 
         return Response(PortfolioSummarySerializer(summary).data, status=status.HTTP_200_OK)
+
+
+@extend_schema(exclude=True)
+class HealthView(views.APIView):
+    authentication_classes = []
+    throttle_classes = []
+
+    def get(self, request, *args, **kwargs):
+        data, is_ok = get_helth_db_cache_celery()
+        return Response(data, status=status.HTTP_200_OK if is_ok else status.HTTP_503_SERVICE_UNAVAILABLE)

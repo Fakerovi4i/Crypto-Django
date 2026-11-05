@@ -14,7 +14,11 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import sentry_sdk
+import structlog
+from django.http import Http404
 from dotenv import load_dotenv
+from rest_framework.exceptions import NotFound, Throttled
 
 load_dotenv()
 
@@ -29,6 +33,11 @@ DEBUG = False
 ALLOWED_HOSTS = ["*"]
 
 INTERNAL_IPS = ["127.0.0.1", "172.18.0.1"]
+
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+
+if SENTRY_DSN:
+    sentry_sdk.init(dsn=SENTRY_DSN, send_default_pii=True, ignore_errors=[Throttled, NotFound, Http404])
 
 
 def show_toolbar(request):
@@ -55,9 +64,11 @@ INSTALLED_APPS = [
     "debug_toolbar",
     "drf_spectacular",
     "django_filters",
+    "django_prometheus",
 ]
 
 MIDDLEWARE = [
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -67,6 +78,7 @@ MIDDLEWARE = [
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -91,7 +103,10 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
+        "ENGINE": "django_prometheus.db.backends.postgresql",
+        "OPTIONS": {
+            "connect_timeout": 3,
+        },
         "NAME": os.getenv("DB_NAME"),
         "USER": os.getenv("DB_USER"),
         "PASSWORD": os.getenv("DB_PASSWORD"),
@@ -260,4 +275,61 @@ CELERY_RESULT_EXPIRES = 60 * 60 * 24
 
 CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {
     "retry_policy": {"max_retries": 1, "interval_start": 0, "interval_step": 0.2, "interval_max": 0.2},
+}
+
+
+structlog.configure(
+    processors=[
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+        # Важно: этот процессор "оборачивает" событие для ProcessorFormatter
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+    ],
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
+    cache_logger_on_first_use=True,
+)
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        # Форматтер, который будет превращать записи logging в JSON
+        "json": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processor": structlog.processors.JSONRenderer(),
+            "foreign_pre_chain": [
+                structlog.stdlib.add_logger_name,
+                structlog.stdlib.add_log_level,
+                structlog.processors.TimeStamper(fmt="iso"),
+            ],
+        },
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "json"},
+        "logstash": {
+            "level": "INFO",
+            "class": "logstash_async.handler.AsynchronousLogstashHandler",
+            "transport": "logstash_async.transport.TcpTransport",
+            "host": "logstash",
+            "port": 5000,
+            "ssl_enable": False,
+            "ssl_verify": False,
+            "database_path": "/tmp/logstash_queue.db",  # как мы уже исправили
+            "formatter": "json",  # <-- Важно: привязываем JSON-форматтер
+        },
+    },
+    "loggers": {
+        # Ваши логгеры, которые будут отправлять логи в Logstash
+        "django": {"handlers": ["logstash", "console"], "level": "INFO", "propagate": True},
+        "crypto": {"handlers": ["logstash", "console"], "level": "INFO", "propagate": False},
+    },
 }
